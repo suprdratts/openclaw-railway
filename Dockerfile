@@ -17,8 +17,11 @@ RUN useradd -m -s /bin/bash clawdbot
 USER clawdbot
 WORKDIR /home/clawdbot
 
+# Add .local/bin to PATH for claude and other user-installed binaries
+ENV PATH="/home/clawdbot/.local/bin:${PATH}"
+
 # Create necessary directories
-RUN mkdir -p .clawdbot clawd
+RUN mkdir -p .clawdbot clawd .local/bin
 
 # Default port
 EXPOSE 18789
