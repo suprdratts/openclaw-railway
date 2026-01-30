@@ -296,6 +296,9 @@ Once Core sync is initialized, Moltbot can:
 - Security headers
 - Disabled command execution by default
 - Added Core sync module with git-based bidirectional sync
+- Added security.js module with CogSec detection and audit logging
+- Created gateway-defaults.json with hardened security configuration
+- Added security audit and analysis API endpoints
 
 ---
 

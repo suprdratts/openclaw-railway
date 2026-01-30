@@ -20,6 +20,7 @@ import httpProxy from "http-proxy";
 import * as tar from "tar";
 
 import coreSync from "./core-sync.js";
+import security from "./security.js";
 
 // =============================================================================
 // Configuration
@@ -242,6 +243,7 @@ function requireSetupAuth(req, res, next) {
   const [scheme, encoded] = header.split(" ");
   if (scheme !== "Basic" || !encoded) {
     res.set("WWW-Authenticate", 'Basic realm="Moltbot Setup"');
+    security.auditAuth(false, { reason: "no_credentials", ip: req.ip, path: req.path });
     return res.status(401).send("Auth required");
   }
   const decoded = Buffer.from(encoded, "base64").toString("utf8");
@@ -249,8 +251,10 @@ function requireSetupAuth(req, res, next) {
   const password = idx >= 0 ? decoded.slice(idx + 1) : "";
   if (password !== SETUP_PASSWORD) {
     res.set("WWW-Authenticate", 'Basic realm="Moltbot Setup"');
+    security.auditAuth(false, { reason: "invalid_password", ip: req.ip, path: req.path });
     return res.status(401).send("Invalid password");
   }
+  security.auditAuth(true, { ip: req.ip, path: req.path });
   return next();
 }
 
@@ -558,13 +562,40 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
     const ok = onboard.code === 0 && isConfigured();
 
     if (ok) {
-      // Set hardened gateway defaults
+      // Apply hardened gateway defaults from config file
+      try {
+        const defaultsPath = path.join(process.cwd(), "config", "gateway-defaults.json");
+        const defaults = JSON.parse(fs.readFileSync(defaultsPath, "utf8"));
+
+        // Apply security defaults
+        if (defaults.nodes?.run) {
+          await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "nodes.run.enabled", String(defaults.nodes.run.enabled)]));
+          if (defaults.nodes.run.denylist) {
+            await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "--json", "nodes.run.denylist", JSON.stringify(defaults.nodes.run.denylist)]));
+          }
+        }
+
+        if (defaults.security?.auditLog) {
+          await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "--json", "security.auditLog", JSON.stringify(defaults.security.auditLog)]));
+        }
+
+        if (defaults.security?.cogSec) {
+          await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "--json", "security.cogSec", JSON.stringify(defaults.security.cogSec)]));
+        }
+
+        extra += "\n[security] Applied hardened defaults from gateway-defaults.json\n";
+        security.auditLog({ type: "config_init", severity: "info", message: "Applied hardened gateway defaults" });
+      } catch (err) {
+        extra += `\n[security] Warning: Could not load gateway-defaults.json: ${err.message}\n`;
+      }
+
+      // Set core gateway configuration
       await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "gateway.auth.mode", "token"]));
       await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "gateway.auth.token", MOLTBOT_GATEWAY_TOKEN]));
       await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "gateway.bind", "loopback"]));
       await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "gateway.port", String(INTERNAL_GATEWAY_PORT)]));
 
-      // SECURITY: Disable command execution by default
+      // SECURITY: Disable command execution by default (redundant but explicit)
       await runCmd(MOLTBOT_NODE, moltArgs(["config", "set", "nodes.run.enabled", "false"]));
 
       // SECURITY: Set trustedProxies for Railway
@@ -774,6 +805,44 @@ app.post("/setup/api/core/commit", requireSetupAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// =============================================================================
+// Security API Routes
+// =============================================================================
+
+app.get("/setup/api/security/audit", requireSetupAuth, async (_req, res) => {
+  const auditLogPath = path.join(STATE_DIR, "audit.log");
+
+  try {
+    if (!fs.existsSync(auditLogPath)) {
+      return res.json({ entries: [], message: "No audit log yet" });
+    }
+
+    const content = fs.readFileSync(auditLogPath, "utf8");
+    const lines = content.trim().split("\n").filter(Boolean);
+    const entries = lines.slice(-100).map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return { raw: line };
+      }
+    });
+
+    res.json({ entries: entries.reverse() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/setup/api/security/analyze", requireSetupAuth, async (req, res) => {
+  const { text } = req.body || {};
+  if (!text) {
+    return res.status(400).json({ error: "Text required" });
+  }
+
+  const result = security.analyzeCogSec(text, { source: "manual_analysis" });
+  res.json(result);
 });
 
 // =============================================================================

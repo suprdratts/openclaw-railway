@@ -1,0 +1,49 @@
+{
+  "$schema": "https://moltbot.dev/schemas/config.json",
+  "$comment": "Hardened gateway defaults for security-first deployments",
+
+  "nodes": {
+    "run": {
+      "enabled": false,
+      "allowlist": [],
+      "denylist": ["rm", "dd", "mkfs", "fdisk", "shutdown", "reboot", "init", "systemctl"]
+    }
+  },
+
+  "security": {
+    "auditLog": {
+      "enabled": true,
+      "logLevel": "info",
+      "includePayloads": false,
+      "retentionDays": 30
+    },
+    "cogSec": {
+      "enabled": true,
+      "detectInjection": true,
+      "detectExfiltration": true,
+      "alertOnDetection": true
+    },
+    "rateLimit": {
+      "enabled": true,
+      "requestsPerMinute": 60,
+      "burstLimit": 10
+    }
+  },
+
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "requireAuth": true
+    },
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1", "::1"]
+  },
+
+  "channels": {
+    "defaults": {
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "streamMode": "partial"
+    }
+  }
+}
