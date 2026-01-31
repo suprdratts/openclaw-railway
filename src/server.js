@@ -480,7 +480,7 @@ app.get("/setup/api/status", requireSetupAuth, async (_req, res) => {
 });
 
 function buildOnboardArgs(payload) {
-  // Let openclaw onboard handle everything - don't override gateway settings
+  // Let openclaw onboard handle everything - quickstart auto-generates gateway token
   const args = [
     "onboard",
     "--non-interactive",
@@ -491,7 +491,6 @@ function buildOnboardArgs(payload) {
     "--workspace", WORKSPACE_DIR,
     "--gateway-bind", "loopback",
     "--gateway-port", String(INTERNAL_GATEWAY_PORT),
-    "--gateway-auth", "token",
     "--flow", payload.flow || "quickstart"
   ];
 
