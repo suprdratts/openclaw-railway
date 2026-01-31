@@ -107,7 +107,6 @@ RUN bun install --production
 
 # Copy wrapper source
 COPY src ./src
-COPY config ./config
 
 # Set ownership
 RUN chown -R openclaw:openclaw /app
@@ -132,7 +131,7 @@ ENV PATH="/home/openclaw/.local/bin:/usr/local/bin:${PATH}"
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -sf http://localhost:8080/setup/healthz || exit 1
+  CMD curl -sf http://localhost:8080/healthz || exit 1
 
 EXPOSE 8080
 
