@@ -1,310 +1,146 @@
-# Hardened OpenClaw Railway Template
+# OpenClaw Railway Template
 
 ## Overview
 
-Security-first OpenClaw deployment for Railway with hardened defaults. Built to compete with existing templates while prioritizing security, proper auth, and Core sync capabilities.
+Minimal, secure OpenClaw deployment for Railway. The bootstrap server is just a status page - all configuration happens via SSH.
 
-**Runtime:** Bun (wrapper) + Node.js (OpenClaw CLI)
-**Key Features:**
-- Non-root container (uid 1001)
-- Token injection fix for Control UI
-- Command execution disabled by default
-- Rate limiting on setup endpoints
-- 1-year auth tokens via `claude setup-token`
+**Architecture:**
+- Bootstrap server (Bun) → Shows setup instructions and status
+- OpenClaw gateway (Node) → Runs on loopback, accessed via Tailscale
+- Tailscale → Secure tunnel for Control UI access
 
 ---
 
-## Architecture
+## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    RAILWAY CONTAINER                         │
-│                    (oven/bun + node)                         │
 │                                                              │
-│  ┌─────────────────┐      ┌─────────────────────────────┐   │
-│  │  Wrapper Server │      │    OpenClaw Gateway          │   │
-│  │   (Bun:8080)    │─────▶│     (Node:18789)            │   │
-│  │                 │      │                             │   │
-│  │  - /setup UI    │      │  - Control UI               │   │
-│  │  - /setup/api/* │      │  - WebSocket API            │   │
-│  │  - Token inject │      │  - Channel handlers         │   │
-│  │  - Rate limit   │      │  - LLM routing              │   │
-│  │  - Proxy        │      │                             │   │
-│  └─────────────────┘      └─────────────────────────────┘   │
+│  Bootstrap Server (:8080)     OpenClaw Gateway (:18789)     │
+│  - Login page                 - Control UI                   │
+│  - Status display             - WebSocket API                │
+│  - Setup instructions         - Channel handlers             │
+│                               - LLM routing                  │
 │                                                              │
-│  Volume: /data                                               │
-│    ├── .openclaw/     (state, config, auth)                  │
-│    ├── workspace/    (files created by openclaw)             │
-│    └── core/         (Core sync directory)                  │
+│  Tailscale ─────────────────► Gateway (loopback only)       │
+│                                                              │
+│  Volume: /data/.openclaw                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+The bootstrap server does **nothing** except show you:
+1. Whether OpenClaw is configured
+2. Whether Tailscale is connected
+3. The Control UI URL when ready
+
+All actual setup happens via `railway shell` + CLI commands.
+
+---
+
+## Deployment
+
+### 1. Deploy to Railway
+
+Set environment variable:
+```
+SETUP_PASSWORD=<your-password>
+```
+
+### 2. Visit the bootstrap page
+
+Go to your Railway URL, login with the password. You'll see "Not Configured".
+
+### 3. SSH and configure
+
+```bash
+railway shell
+```
+
+Inside the container:
+```bash
+# Run OpenClaw setup wizard
+openclaw onboard
+
+# Connect Tailscale
+tailscale up
+# Follow the auth URL
+```
+
+### 4. Access Control UI
+
+Refresh the bootstrap page. It will show your Tailscale IP and the full Control UI URL:
+```
+http://<tailscale-ip>:18789/?token=<gateway-token>
+```
+
+Open this from any device on your Tailnet.
 
 ---
 
 ## Security Model
 
-### Hardened Defaults
+| Layer | Protection |
+|-------|------------|
+| Bootstrap page | Password-protected, read-only |
+| Gateway | Bound to loopback only |
+| Control UI | Tailscale-only access |
+| Channels | Pairing required for each user |
 
-| Setting | Default | Why |
-|---------|---------|-----|
-| `nodes.run.enabled` | `false` | Prevent arbitrary command execution |
-| `gateway.auth.mode` | `token` | Require authentication for all gateway access |
-| `gateway.bind` | `loopback` | Only wrapper can reach gateway |
-| `dmPolicy` | `pairing` | Require approval for new DM conversations |
-| `groupPolicy` | `allowlist` | Explicit approval for group chats |
-
-### Trust Ladder
-
-1. **Setup Password** - Access to /setup UI
-2. **Gateway Token** - Access to Control UI and API
-3. **Channel Pairing** - Per-user approval for messaging
-4. **Command Execution** - Disabled by default, allowlist only
-
-### Rate Limiting
-
-- 30 requests per minute on `/setup/*` endpoints
-- Prevents brute-force attacks on setup password
-
----
-
-## Environment Variables
-
-### Required
-
-```bash
-SETUP_PASSWORD=<min-16-chars>  # Protects /setup UI
-```
-
-### Auto-Generated
-
-```bash
-OPENCLAW_GATEWAY_TOKEN=<32-byte-hex>  # Generated if not set, persisted in /data
-```
-
-### Optional
-
-```bash
-# Directories
-OPENCLAW_STATE_DIR=/data/.openclaw
-OPENCLAW_WORKSPACE_DIR=/data/workspace
-OPENCLAW_CORE_DIR=/data/core
-
-# Ports
-OPENCLAW_PUBLIC_PORT=8080
-INTERNAL_GATEWAY_PORT=18789
-
-# Core sync (Phase 2)
-GITHUB_TOKEN=ghp_xxx
-CORE_REPO=slayga/Core
-CORE_BRANCH=main
-CORE_SYNC_INTERVAL_MINUTES=15
-```
-
----
-
-## CLI Commands
-
-### Container Access
-
-```bash
-# SSH into Railway container
-railway shell
-
-# Or via Railway CLI
-railway run bash
-```
-
-### Auth Setup (1-Year Tokens)
-
-```bash
-# Create long-lived Anthropic token
-claude setup-token
-# Follow browser auth flow, token syncs to OpenClaw automatically
-```
-
-### OpenClaw CLI
-
-```bash
-# Status
-openclaw status
-openclaw health
-openclaw models status
-
-# Config
-openclaw config get <key>
-openclaw config set <key> <value>
-openclaw doctor --fix
-
-# Channels
-openclaw channels list
-openclaw channels add telegram --bot-token <token>
-openclaw pairing approve telegram <CODE>
-
-# Security
-openclaw security audit
-openclaw config get nodes.run.enabled
-
-# Update
-openclaw update
-```
+The gateway is **never** exposed to the public internet. Tailscale provides end-to-end encryption.
 
 ---
 
 ## File Structure
 
 ```
-openclaw-railway-hardened/
-├── CLAUDE.md                 # This file
-├── README.md                 # User documentation
-├── Dockerfile                # Multi-stage, non-root, Bun + Node
-├── railway.toml              # Railway config
-├── package.json              # Wrapper dependencies
-├── src/
-│   ├── server.js            # Bun wrapper server
-│   └── setup-app.js         # Client-side setup UI
-└── config/
-    └── gateway-defaults.json # Hardened defaults (Phase 3)
+openclaw-railway/
+├── CLAUDE.md         # This file
+├── Dockerfile        # Container build
+├── railway.toml      # Railway config
+├── package.json      # Dependencies (express, cookie-parser)
+├── entrypoint.sh     # Permission setup
+└── src/
+    └── server.js     # Bootstrap server (~300 lines)
 ```
 
 ---
 
-## Key Fixes Over Vignesh Template
+## Environment Variables
 
-| Issue | Fix |
-|-------|-----|
-| Token injection bug | Redirect `/openclaw/*` paths to include `?token=` |
-| Runs as root | Non-root `openclaw` user (uid 1001) |
-| No pnpm in runtime | Installed for `openclaw update` |
-| No Claude CLI | Installed for `claude setup-token` |
-| No trustedProxies | Pre-configured for Railway |
-| Command execution open | Disabled by default |
-| Node.js only | Bun wrapper for performance |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SETUP_PASSWORD` | Yes | Protects bootstrap page |
+| `PORT` | No | Railway sets this automatically |
 
 ---
 
 ## Endpoints
 
-### Health
-
-- `GET /setup/healthz` - Health check (no auth)
-
-### Setup UI
-
-- `GET /setup` - Onboarding wizard (Basic auth with SETUP_PASSWORD)
-- `GET /setup/app.js` - Client-side JavaScript
-
-### Setup API
-
-- `GET /setup/api/status` - Configuration status
-- `POST /setup/api/run` - Run onboarding
-- `POST /setup/api/pairing/approve` - Approve DM pairing
-- `POST /setup/api/reset` - Reset configuration
-- `GET /setup/api/debug` - Debug info
-- `GET /setup/export` - Download backup tarball
-
-### Gateway Proxy
-
-- `/openclaw/*` - Proxied to gateway with token injection
-- All other paths - Proxied to gateway
+| Path | Auth | Purpose |
+|------|------|---------|
+| `/healthz` | No | Health check for Railway |
+| `/login` | No | Login form |
+| `/` | Yes | Status page |
+| `/api/status` | Yes | JSON status for refresh |
 
 ---
 
-## Development
+## States
 
-### Local Testing
+The bootstrap page shows one of three states:
 
-```bash
-# Install dependencies
-bun install
-
-# Run locally (needs openclaw installed)
-SETUP_PASSWORD=test1234567890123456 bun run src/server.js
-```
-
-### Docker Build
-
-```bash
-docker build -t openclaw-railway-hardened .
-docker run -p 8080:8080 \
-  -e SETUP_PASSWORD=test1234567890123456 \
-  -v openclaw_data:/data \
-  openclaw-railway-hardened
-```
-
----
-
-## Deployment Checklist
-
-- [ ] Set `SETUP_PASSWORD` in Railway Variables (min 16 chars)
-- [ ] Deploy and verify `/setup/healthz` returns ok
-- [ ] Access `/setup` with password
-- [ ] Select auth provider (recommend: Anthropic token via `claude setup-token`)
-- [ ] Add Telegram bot token if desired
-- [ ] Run onboarding
-- [ ] SSH in and run `claude setup-token` for 1-year auth
-- [ ] Test Telegram pairing
-- [ ] Verify Control UI at `/openclaw`
-
----
-
-## Core Sync
-
-Git-based bidirectional sync for The Core (Obsidian vault).
-
-### Environment Variables
-
-```bash
-GITHUB_TOKEN=ghp_xxx           # GitHub PAT with repo access
-CORE_REPO=slayga/Core          # owner/repo format
-CORE_BRANCH=main               # Branch to sync (default: main)
-CORE_SYNC_INTERVAL_MINUTES=15  # Background sync interval (default: 15, 0 to disable)
-```
-
-### API Endpoints
-
-- `GET /setup/api/core/status` - Current sync status and recent commits
-- `POST /setup/api/core/init` - Clone and initialize Core repo
-- `POST /setup/api/core/sync` - Trigger manual sync (pull + push)
-- `POST /setup/api/core/commit` - Commit and push specific changes
-
-### How It Works
-
-1. **Initialize**: Clones the repo to `/data/core`
-2. **Background Sync**: Runs every 15 minutes (configurable)
-3. **Pull**: Fetches remote changes, rebases local changes
-4. **Push**: Commits and pushes local changes
-5. **Conflict Resolution**: Accepts remote version on conflicts (preserves remote, logs conflict)
-
-### Usage via OpenClaw
-
-Once Core sync is initialized, OpenClaw can:
-- Read notes from `/data/core/`
-- Create/update notes (changes auto-sync)
-- Access The Core as a knowledge base
+1. **not_configured** → Run `openclaw onboard`
+2. **needs_tailscale** → Run `tailscale up`
+3. **ready** → Shows Control UI URL
 
 ---
 
 ## Session Log
 
-### 2025-01-30
+### 2026-01-31
 
-- Implemented hardened template based on plan
-- Multi-stage Dockerfile with Bun runtime
-- Non-root user (uid 1001)
-- Token injection fix for Control UI
-- Rate limiting on /setup/* endpoints
-- Security headers
-- Disabled command execution by default
-- Added Core sync module with git-based bidirectional sync
-- Added security.js module with CogSec detection and audit logging
-- Created gateway-defaults.json with hardened security configuration
-- Added security audit and analysis API endpoints
-
----
-
-## References
-
-- OpenClaw Docs: https://docs.openclaw.dev/
-- Railway Guide: https://docs.openclaw.dev/railway
-- Docker Guide: https://docs.openclaw.dev/install/docker
-- Vignesh Template: https://github.com/vignesh07/clawdbot-railway-template
+- Simplified to minimal bootstrap server
+- Removed all API endpoints that modify config
+- Status page only - all setup via SSH
+- ~300 lines of code total
