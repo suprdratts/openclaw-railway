@@ -83,8 +83,16 @@ RUN mkdir -p /data/.openclaw /data/workspace /data/core \
 COPY --from=openclaw-build /openclaw /openclaw
 RUN chown -R openclaw:openclaw /openclaw
 
-# Create openclaw CLI wrapper (uses Node for openclaw itself)
-RUN printf '%s\n' '#!/usr/bin/env bash' 'exec node /openclaw/dist/entry.js "$@"' > /usr/local/bin/openclaw \
+# Create openclaw CLI wrapper that always runs as the openclaw user
+# This prevents permission issues when root (SSH) runs openclaw commands
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'if [ "$(id -u)" = "0" ]; then' \
+  '  exec su openclaw -c "node /openclaw/dist/entry.js $*"' \
+  'else' \
+  '  exec node /openclaw/dist/entry.js "$@"' \
+  'fi' \
+  > /usr/local/bin/openclaw \
   && chmod +x /usr/local/bin/openclaw
 
 # Note: Claude Code CLI can be installed manually via SSH if needed:
