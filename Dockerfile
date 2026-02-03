@@ -78,8 +78,9 @@ RUN curl -fsSL https://tailscale.com/install.sh | sh
 RUN groupadd -g 1001 openclaw \
   && useradd -u 1001 -g openclaw -m -s /bin/bash openclaw
 
-# Create data directory structure
-RUN mkdir -p /data/.openclaw /data/workspace /data/core \
+# Create data directory structure and tailscale socket dir
+RUN mkdir -p /data/.openclaw /data/workspace /data/core /data/tailscale \
+  && mkdir -p /var/run/tailscale \
   && chown -R openclaw:openclaw /data
 
 # Copy built openclaw from build stage

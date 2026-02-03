@@ -195,7 +195,8 @@ function renderStatus(status) {
   let content = "";
 
   if (state === "ready") {
-    const url = `http://${tailscale.ip}:18789/${token ? `?token=${token}` : ""}`;
+    const url = `https://${tailscale.hostname}.tail<wbr>scale.net/${token ? `?token=${token}` : ""}`;
+    const altUrl = `https://${tailscale.ip}/${token ? `?token=${token}` : ""}`;
     content = `
       <div class="card success">
         <h2>Ready</h2>
@@ -203,15 +204,15 @@ function renderStatus(status) {
         <div class="info">
           <p><strong>Control UI:</strong></p>
           <code class="block">${url}</code>
-          <p class="muted">Open this URL from any device on your Tailnet</p>
+          <p class="muted">Or use IP: <code>${altUrl}</code></p>
         </div>
       </div>
 
       <div class="card">
         <h2>Details</h2>
         <table>
+          <tr><td>Tailscale Hostname</td><td><code>${tailscale.hostname}</code></td></tr>
           <tr><td>Tailscale IP</td><td><code>${tailscale.ip}</code></td></tr>
-          <tr><td>Hostname</td><td><code>${tailscale.hostname}</code></td></tr>
           <tr><td>Gateway Token</td><td><code>${token ? token.substring(0, 12) + "..." : "not set"}</code></td></tr>
         </table>
       </div>
@@ -219,7 +220,7 @@ function renderStatus(status) {
       <div class="card">
         <h2>Next Steps</h2>
         <ol>
-          <li>Open the Control UI link above on your device</li>
+          <li>Open the Control UI link above from any device on your Tailnet</li>
           <li>Configure channels (Telegram, Discord) in the Control UI</li>
           <li>Message your bot to start a pairing request</li>
           <li>Approve pairing in Control UI or via CLI: <code>openclaw pairing approve telegram CODE</code></li>
