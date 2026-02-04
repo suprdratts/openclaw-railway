@@ -27,22 +27,15 @@ jq '
 ' "$CONFIG_FILE" > /tmp/openclaw.json && mv /tmp/openclaw.json "$CONFIG_FILE"
 chown openclaw:openclaw "$CONFIG_FILE"
 
-# Check if Tailscale is ready
-if tailscale status --json 2>/dev/null | grep -q '"BackendState":"Running"'; then
-  echo "[watcher] Starting gateway with Tailscale serve..." >> "$LOG"
-  su openclaw -c "cd /data/workspace && nohup openclaw gateway run \
-    --port 18789 \
-    --tailscale serve \
-    > /data/.openclaw/gateway.log 2>&1 &"
+# Always start with --tailscale serve
+# The gateway handles Tailscale setup automatically
+echo "[watcher] Starting gateway with Tailscale serve..." >> "$LOG"
+su openclaw -c "cd /data/workspace && nohup openclaw gateway run \
+  --port 18789 \
+  --tailscale serve \
+  > /data/.openclaw/gateway.log 2>&1 &"
 
-  sleep 3
-  TS_HOSTNAME=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName' | sed 's/\.$//')
-  echo "[watcher] Control UI ready: https://$TS_HOSTNAME/" >> "$LOG"
-else
-  echo "[watcher] Starting gateway without Tailscale..." >> "$LOG"
-  su openclaw -c "cd /data/workspace && nohup openclaw gateway run \
-    --port 18789 \
-    > /data/.openclaw/gateway.log 2>&1 &"
-fi
-
+sleep 3
+TS_HOSTNAME=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName' | sed 's/\.$//')
+echo "[watcher] Control UI: https://$TS_HOSTNAME/" >> "$LOG"
 echo "[watcher] Done" >> "$LOG"
