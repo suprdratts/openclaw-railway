@@ -115,9 +115,10 @@ COPY src ./src
 # Set ownership
 RUN chown -R openclaw:openclaw /app
 
-# Copy entrypoint script (runs as root to fix volume permissions, then drops to openclaw)
+# Copy entrypoint and watcher scripts
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY config-watcher.sh /app/config-watcher.sh
+RUN chmod +x /entrypoint.sh /app/config-watcher.sh
 
 # NOTE: We do NOT use USER here because entrypoint needs root to fix volume permissions
 # The entrypoint script drops privileges to openclaw user after setup
