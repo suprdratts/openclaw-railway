@@ -54,7 +54,9 @@ Go to your Railway URL, login with the password. You'll see "Not Configured".
 ### 3. SSH and configure
 
 ```bash
-railway shell
+railway login
+railway link
+railway ssh
 ```
 
 Inside the container:
@@ -62,19 +64,24 @@ Inside the container:
 # Run OpenClaw setup wizard
 openclaw onboard
 
-# Connect Tailscale
+# Connect Tailscale (one-time auth)
 tailscale up
-# Follow the auth URL
+# Follow the auth URL in your browser
 ```
 
 ### 4. Access Control UI
 
-Refresh the bootstrap page. It will show your Tailscale IP and the full Control UI URL:
+Refresh the bootstrap page. It will show your Tailscale DNS URL:
 ```
-http://<tailscale-ip>:18789/?token=<gateway-token>
+https://<hostname>.<tailnet>.ts.net/
 ```
 
-Open this from any device on your Tailnet.
+Open from any device on your Tailnet. No token needed - Tailscale identity handles auth.
+
+**Note:** The entrypoint automatically:
+- Starts tailscaled with correct permissions
+- Patches openclaw.json with Tailscale serve settings
+- Starts gateway with `--tailscale serve`
 
 ---
 
@@ -136,7 +143,73 @@ The bootstrap page shows one of three states:
 
 ---
 
+## OpenClaw Gateway + Tailscale Reference
+
+**Source:** https://docs.openclaw.ai/gateway/tailscale
+
+### Built-in Tailscale Support
+
+OpenClaw has **native Tailscale integration** - don't manually run `tailscale serve`.
+
+**Gateway CLI options:**
+- `--tailscale <off|serve|funnel>` - expose Gateway via Tailscale
+- `--tailscale-reset-on-exit` - reset serve/funnel config on shutdown
+
+**Config options (`openclaw.json`):**
+```json
+{
+  "gateway": {
+    "bind": "loopback",
+    "tailscale": {
+      "mode": "serve"    // off | serve | funnel
+    },
+    "auth": {
+      "mode": "token",
+      "allowTailscale": true  // Allow Tailscale identity auth
+    }
+  }
+}
+```
+
+### Tailscale Modes
+
+| Mode | Description | Security |
+|------|-------------|----------|
+| `off` | No Tailscale (default) | Manual setup required |
+| `serve` | Tailnet-only HTTPS | Gateway stays on loopback, Tailscale handles routing |
+| `funnel` | Public HTTPS | Requires password auth (refuses to start without it) |
+
+### Identity Header Authentication
+
+When `tailscale.mode = "serve"` and `auth.allowTailscale = true`:
+- Users authenticate via Tailscale identity headers (`tailscale-user-login`)
+- No token/password needed in URL
+- OpenClaw verifies by calling `tailscale whois` on the source IP
+
+To disable: set `auth.allowTailscale: false`
+
+### Requirements
+
+- Tailscale CLI installed and logged in (`tailscale up`)
+- For Funnel: Tailscale v1.38.3+, MagicDNS, HTTPS enabled
+- Funnel only supports ports 443, 8443, 10000
+
+### Key Docs
+
+- https://docs.openclaw.ai/gateway/tailscale
+- https://docs.openclaw.ai/gateway/authentication
+- https://docs.openclaw.ai/gateway/security
+- https://docs.openclaw.ai/cli/gateway
+
+---
+
 ## Session Log
+
+### 2026-02-04
+
+- Discovered OpenClaw has built-in Tailscale support (`--tailscale serve`)
+- Don't manually run `tailscale serve` - let OpenClaw handle it
+- Use `gateway.tailscale.mode: "serve"` + `gateway.auth.allowTailscale: true`
 
 ### 2026-01-31
 

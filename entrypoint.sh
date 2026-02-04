@@ -44,44 +44,73 @@ for i in {1..30}; do
   sleep 0.5
 done
 
+# Set operator so openclaw user can manage tailscale serve
+tailscale set --operator=openclaw 2>/dev/null || true
+
 # Check if already authenticated (state persisted from previous deploy)
+TAILSCALE_READY=false
 if tailscale status --json 2>/dev/null | grep -q '"BackendState":"Running"'; then
   echo "[entrypoint] Tailscale already authenticated and running"
+  TAILSCALE_READY=true
 else
   echo "[entrypoint] Tailscale not authenticated - run 'tailscale up' via SSH"
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Start OpenClaw gateway (if configured)
+# 3. Ensure OpenClaw config has correct Tailscale settings
 # -----------------------------------------------------------------------------
 CONFIG_FILE="/data/.openclaw/openclaw.json"
 
 if [ -f "$CONFIG_FILE" ]; then
-  echo "[entrypoint] OpenClaw config found, starting gateway..."
+  echo "[entrypoint] Patching OpenClaw config for Tailscale..."
 
-  # Run gateway as openclaw user, bound to loopback only
-  su openclaw -c "cd /data/workspace && openclaw gateway run \
-    --port 18789 \
-    --bind 127.0.0.1 \
-    > /data/.openclaw/gateway.log 2>&1 &"
+  # Patch config to enable Tailscale serve mode and auth settings
+  # This ensures the gateway uses OpenClaw's native Tailscale integration
+  jq '
+    .gateway.tailscale.mode = "serve" |
+    .gateway.auth.allowTailscale = true |
+    .gateway.controlUi.allowInsecureAuth = true |
+    .gateway.trustedProxies = ["127.0.0.1"]
+  ' "$CONFIG_FILE" > /tmp/openclaw.json && mv /tmp/openclaw.json "$CONFIG_FILE"
 
-  echo "[entrypoint] Gateway starting on 127.0.0.1:18789"
+  chown openclaw:openclaw "$CONFIG_FILE"
+  echo "[entrypoint] Config patched"
+fi
 
-  # Give it a moment to start
-  sleep 2
+# -----------------------------------------------------------------------------
+# 4. Start OpenClaw gateway (if configured)
+# -----------------------------------------------------------------------------
+if [ -f "$CONFIG_FILE" ]; then
+  echo "[entrypoint] Starting gateway..."
 
-  # Set up Tailscale serve if authenticated (provides HTTPS for Control UI)
-  if tailscale status --json 2>/dev/null | grep -q '"BackendState":"Running"'; then
-    echo "[entrypoint] Setting up Tailscale serve for HTTPS..."
-    tailscale serve --bg --https=443 http://127.0.0.1:18789 2>/dev/null || true
-    echo "[entrypoint] Control UI available at https://$(tailscale ip -4 2>/dev/null || echo '<tailscale-ip>'):443"
+  # Use --tailscale serve if Tailscale is authenticated
+  if [ "$TAILSCALE_READY" = true ]; then
+    echo "[entrypoint] Tailscale ready - gateway will enable serve mode"
+    su openclaw -c "cd /data/workspace && openclaw gateway run \
+      --port 18789 \
+      --tailscale serve \
+      > /data/.openclaw/gateway.log 2>&1 &"
+  else
+    echo "[entrypoint] Tailscale not ready - gateway starting without serve"
+    su openclaw -c "cd /data/workspace && openclaw gateway run \
+      --port 18789 \
+      > /data/.openclaw/gateway.log 2>&1 &"
+  fi
+
+  # Wait for gateway to start
+  sleep 3
+
+  # Show access URL if Tailscale is ready
+  if [ "$TAILSCALE_READY" = true ]; then
+    TS_HOSTNAME=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName' | sed 's/\.$//')
+    echo "[entrypoint] Control UI: https://$TS_HOSTNAME/"
   fi
 else
   echo "[entrypoint] No config found - run 'openclaw onboard' via SSH"
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Start bootstrap server (drops to openclaw user)
+# 5. Start bootstrap server (drops to openclaw user)
 # -----------------------------------------------------------------------------
 echo "[entrypoint] Starting bootstrap server..."
 exec su openclaw -c "cd /app && bun run src/server.js"

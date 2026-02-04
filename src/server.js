@@ -75,14 +75,17 @@ function getTailscaleStatus() {
   try {
     const output = execSync("tailscale status --json 2>/dev/null", { encoding: "utf8", timeout: 5000 });
     const status = JSON.parse(output);
+    // DNSName includes trailing dot, remove it
+    const dnsName = status.Self?.DNSName?.replace(/\.$/, "") || null;
     return {
       running: true,
       ip: status.Self?.TailscaleIPs?.[0] || null,
       hostname: status.Self?.HostName || null,
+      dnsName,
       online: status.Self?.Online || false,
     };
   } catch {
-    return { running: false, ip: null, hostname: null, online: false };
+    return { running: false, ip: null, hostname: null, dnsName: null, online: false };
   }
 }
 
@@ -195,8 +198,8 @@ function renderStatus(status) {
   let content = "";
 
   if (state === "ready") {
-    const url = `https://${tailscale.hostname}.tail<wbr>scale.net/${token ? `?token=${token}` : ""}`;
-    const altUrl = `https://${tailscale.ip}/${token ? `?token=${token}` : ""}`;
+    // Use the full DNS name from Tailscale (e.g., hostname.tailnet-name.ts.net)
+    const url = `https://${tailscale.dnsName}/`;
     content = `
       <div class="card success">
         <h2>Ready</h2>
@@ -204,16 +207,15 @@ function renderStatus(status) {
         <div class="info">
           <p><strong>Control UI:</strong></p>
           <code class="block">${url}</code>
-          <p class="muted">Or use IP: <code>${altUrl}</code></p>
+          <p class="muted">Open from any device on your Tailnet (no token needed)</p>
         </div>
       </div>
 
       <div class="card">
         <h2>Details</h2>
         <table>
-          <tr><td>Tailscale Hostname</td><td><code>${tailscale.hostname}</code></td></tr>
+          <tr><td>Tailscale DNS</td><td><code>${tailscale.dnsName}</code></td></tr>
           <tr><td>Tailscale IP</td><td><code>${tailscale.ip}</code></td></tr>
-          <tr><td>Gateway Token</td><td><code>${token ? token.substring(0, 12) + "..." : "not set"}</code></td></tr>
         </table>
       </div>
 
