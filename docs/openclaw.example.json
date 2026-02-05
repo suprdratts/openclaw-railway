@@ -1,0 +1,73 @@
+{
+  "$schema": "https://openclaw.ai/schema/config.json",
+
+  "gateway": {
+    "port": 18789,
+    "bind": "loopback",
+    "auth": {
+      "mode": "token"
+    },
+    "trustedProxies": ["127.0.0.1"]
+  },
+
+  "agents": {
+    "defaults": {
+      "model": "anthropic/claude-opus-4-5"
+    }
+  },
+
+  "tools": {
+    "exec": {
+      "enabled": true,
+      "ask": "elevated",
+      "allowlist": [
+        "ls", "cat", "head", "tail", "grep", "find",
+        "wc", "sort", "uniq", "pwd", "echo", "date",
+        "git status", "git log", "git diff"
+      ]
+    },
+    "fs": {
+      "enabled": true,
+      "blocklist": [
+        ".ssh",
+        ".aws",
+        ".env",
+        ".openclaw",
+        "credentials",
+        "/etc/passwd",
+        "/etc/shadow"
+      ]
+    },
+    "browser": {
+      "enabled": false
+    },
+    "web_fetch": {
+      "enabled": true,
+      "ask": "always"
+    }
+  },
+
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist"
+    },
+    "discord": {
+      "enabled": false
+    },
+    "slack": {
+      "enabled": false
+    }
+  },
+
+  "sessions": {
+    "dmScope": "per-channel-peer"
+  },
+
+  "discovery": {
+    "mdns": {
+      "mode": "off"
+    }
+  }
+}

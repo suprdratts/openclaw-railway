@@ -1,176 +1,89 @@
-# OpenClaw Railway - Hardened Template
+# OpenClaw Railway Template
 
-Security-first OpenClaw deployment for Railway with hardened defaults, non-root container, and proper auth handling.
+Minimal, secure OpenClaw deployment for Railway.
 
 ## Features
 
-- **Non-root container** - Runs as uid 1001 for security
-- **Token injection fix** - Control UI works without manual token entry
-- **Command execution disabled** - Secure by default
-- **Rate limiting** - Protects setup endpoint from brute force
-- **1-year auth tokens** - Via `claude setup-token`
-- **Bun runtime** - Fast wrapper server
+- **Non-root container** - Runs as uid 1001
+- **Gateway on loopback** - Never exposed publicly
+- **Secure file permissions** - 700/600 on sensitive files
+- **No dependencies** - Health server is ~30 lines of code
+- **Environment variable secrets** - API keys never stored in config files
 
-## Quick Deploy
+## Quick Start
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/openclaw-hardened)
+1. Deploy to Railway
+2. SSH in: `railway ssh`
+3. Run: `openclaw onboard`
+4. Message your bot on Telegram/Discord
 
-Or manually:
+## Documentation
 
-1. Fork this repository
-2. Create new Railway project from GitHub repo
-3. Set `SETUP_PASSWORD` environment variable (min 16 characters)
-4. Deploy
-
-## Setup
-
-### 1. Access Setup Wizard
-
-After deployment, visit:
-```
-https://your-app.railway.app/setup
-```
-
-Enter your `SETUP_PASSWORD` when prompted.
-
-### 2. Configure Auth Provider
-
-Recommended: **Anthropic token via Claude Code CLI**
-
-1. SSH into container: `railway shell`
-2. Run: `claude setup-token`
-3. Complete browser auth flow
-4. Token automatically syncs to OpenClaw
-
-Alternative: Paste API key directly in setup wizard.
-
-### 3. Add Channels (Optional)
-
-In the setup wizard, add:
-- **Telegram**: Get token from @BotFather
-- **Discord**: Get token from Discord Developer Portal (enable MESSAGE CONTENT INTENT)
-- **Slack**: Get bot token and app token
-
-### 4. Complete Onboarding
-
-Click "Run setup" - this configures OpenClaw with hardened defaults:
-- Command execution: **disabled**
-- Gateway auth: **token required**
-- DM policy: **pairing required**
-
-### 5. Approve Pairing
-
-Message your bot on Telegram/Discord. You'll receive a pairing code.
-
-Use the "Approve pairing" button in the setup wizard, or SSH in and run:
-```bash
-openclaw pairing approve telegram ABCD1234
-```
+| Guide | Description |
+|-------|-------------|
+| [Setup Guide](docs/SETUP.md) | Step-by-step deployment instructions |
+| [Security Guide](docs/SECURITY.md) | Hardening and best practices |
+| [Provider Setup](docs/PROVIDERS.md) | LLM provider configuration |
+| [Sandboxing](docs/SANDBOXING.md) | Agent isolation options |
 
 ## Environment Variables
 
-### Required
+Set these in Railway Dashboard → Variables:
 
-| Variable | Description |
-|----------|-------------|
-| `SETUP_PASSWORD` | Password for /setup UI (min 16 chars) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Yes* | Anthropic API key |
+| `TELEGRAM_BOT_TOKEN` | For Telegram | From @BotFather |
+| `DISCORD_BOT_TOKEN` | For Discord | From Developer Portal |
 
-### Optional
+*Or another LLM provider's key. See [Provider Setup](docs/PROVIDERS.md).
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENCLAW_GATEWAY_TOKEN` | (auto-generated) | Gateway auth token |
-| `OPENCLAW_STATE_DIR` | `/data/.openclaw` | State directory |
-| `OPENCLAW_WORKSPACE_DIR` | `/data/workspace` | Workspace directory |
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 RAILWAY CONTAINER                    │
+│                                                      │
+│  Health Server (:8080)     Gateway (:18789)         │
+│  - /healthz endpoint       - Runs on loopback       │
+│  - No sensitive info       - Handles channels       │
+│                            - Runs agents            │
+│                                                      │
+│  Volume: /data/.openclaw                            │
+└─────────────────────────────────────────────────────┘
+```
 
 ## Security Model
 
-### Trust Ladder
+| Layer | Protection |
+|-------|------------|
+| API Keys | Stored in Railway env vars (encrypted at rest) |
+| Gateway | Bound to loopback only |
+| Channels | Pairing required by default |
+| Config | 600 permissions (user read/write only) |
 
-1. **Setup Password** - Access to /setup configuration
-2. **Gateway Token** - Access to Control UI and API
-3. **Channel Pairing** - Per-user approval for messaging
-4. **Command Execution** - Disabled by default
-
-### Hardened Defaults
-
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| `nodes.run.enabled` | `false` | No arbitrary commands |
-| `gateway.auth.mode` | `token` | Require authentication |
-| `gateway.bind` | `loopback` | Internal only |
-| `dmPolicy` | `pairing` | Require approval |
-
-## CLI Reference
-
-SSH into container: `railway shell`
+## Useful Commands
 
 ```bash
-# Status
-openclaw status
-openclaw health
+# SSH into container
+railway ssh
 
-# Auth (recommended)
-claude setup-token  # Creates 1-year token
+# Check gateway status
+ps aux | grep gateway
 
-# Config
-openclaw config get nodes.run.enabled
-openclaw config set nodes.run.enabled true  # Enable if needed
+# View logs
+cat /data/.openclaw/gateway.log
 
-# Channels
-openclaw pairing approve telegram CODE
-openclaw channels list
+# Security audit
+openclaw security audit --deep --fix
 
-# Update
+# Approve pairing
+openclaw pairing approve telegram <code>
+
+# Update OpenClaw
 openclaw update
 ```
-
-## Backup & Restore
-
-### Export
-
-Download backup from:
-```
-https://your-app.railway.app/setup/export
-```
-
-### Restore
-
-Extract to `/data` volume and restart.
-
-## Updating OpenClaw
-
-SSH in and run:
-```bash
-openclaw update
-```
-
-Or redeploy with updated `OPENCLAW_GIT_REF` build arg.
-
-## Troubleshooting
-
-### "Gateway not ready"
-
-1. Check logs: `railway logs`
-2. SSH in and run: `openclaw doctor --fix`
-3. Restart service in Railway dashboard
-
-### "Token invalid"
-
-1. SSH in and run: `claude setup-token`
-2. Complete browser auth
-3. Restart gateway
-
-### Bot not responding
-
-1. Check channel is enabled: `openclaw channels list`
-2. Check pairing approved: `openclaw pairing list`
-3. Check logs for errors
 
 ## License
 
 MIT
-
-## Credits
-
-Based on patterns from [vignesh07/clawdbot-railway-template](https://github.com/vignesh07/clawdbot-railway-template) with security hardening.
