@@ -9,6 +9,33 @@ Complete guide to deploying OpenClaw on Railway.
 - API key for your LLM provider (Anthropic, OpenAI, etc.)
 - Bot token for your channel (Telegram, Discord, etc.)
 
+## Windows Users
+
+### Option A: WSL (Recommended)
+
+If you have Windows Subsystem for Linux installed, open your Ubuntu/Debian terminal and follow the instructions below exactly as written. You'll have the same experience as Mac/Linux users.
+
+To install WSL: Open PowerShell as Administrator and run:
+```powershell
+wsl --install
+```
+
+Restart your computer, then open "Ubuntu" from the Start menu.
+
+### Option B: PowerShell
+
+If you don't want to use WSL:
+
+1. Install [Node.js](https://nodejs.org) (LTS version)
+2. Open PowerShell
+3. Install Railway CLI:
+   ```powershell
+   npm install -g @railway/cli
+   ```
+4. Continue with the steps below - commands are the same
+
+**Note:** WSL is recommended because some Railway CLI features work more reliably in a Linux environment.
+
 ## Step 1: Deploy to Railway
 
 ### Option A: One-Click Deploy
