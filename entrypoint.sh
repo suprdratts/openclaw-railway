@@ -34,14 +34,13 @@ if [ -d "/app/docs" ] && [ ! -d "/data/workspace/docs" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Build config from environment variables (if not exists)
+# 3. Build config from environment variables (always regenerate)
 # -----------------------------------------------------------------------------
 CONFIG_FILE="/data/.openclaw/openclaw.json"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "[entrypoint] Building config from environment variables..."
-  node /app/src/build-config.js
-fi
+# Always regenerate config from env vars to pick up changes
+echo "[entrypoint] Building config from environment variables..."
+node /app/src/build-config.js
 
 # -----------------------------------------------------------------------------
 # 4. Start OpenClaw gateway (if configured)

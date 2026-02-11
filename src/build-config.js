@@ -153,11 +153,7 @@ function buildConfig() {
 }
 
 function main() {
-  // Skip if config already exists (don't overwrite user changes)
-  if (fs.existsSync(CONFIG_PATH)) {
-    console.log('[build-config] Config already exists, skipping generation');
-    return;
-  }
+  // Always regenerate config from env vars (Railway controls config via env vars)
 
   // Check for minimum requirements
   const hasChannel = [
@@ -189,6 +185,11 @@ function main() {
   // Write config with secure permissions
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), { mode: 0o600 });
   console.log('[build-config] Generated config at', CONFIG_PATH);
+
+  // Log key config values for debugging (not sensitive data)
+  console.log('[build-config] Channels configured:', Object.keys(config.channels || {}).join(', ') || 'none');
+  console.log('[build-config] Gateway auth mode:', config.gateway?.auth?.mode || 'not set');
+  console.log('[build-config] Gateway token set:', config.gateway?.auth?.token ? 'yes' : 'no');
 }
 
 main();
