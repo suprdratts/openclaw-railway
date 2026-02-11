@@ -1,42 +1,49 @@
-# OpenClaw Railway Setup Guide
+# Setup Guide
 
-Complete guide to deploying OpenClaw on Railway.
+Deploy OpenClaw to Railway in minutes.
 
 ## Prerequisites
 
 - [Railway account](https://railway.app)
-- [Railway CLI](https://docs.railway.app/guides/cli) installed locally
-- API key for your LLM provider (Anthropic, OpenAI, etc.)
-- Bot token for your channel (Telegram, Discord, etc.)
+- API key from an LLM provider
+- Bot token for your channel (Telegram, Discord, or Slack)
+- Your user ID for that channel
 
-## Windows Users
+## Step 1: Get Your Credentials
 
-### Option A: WSL (Recommended)
+### LLM Provider
 
-If you have Windows Subsystem for Linux installed, open your Ubuntu/Debian terminal and follow the instructions below exactly as written. You'll have the same experience as Mac/Linux users.
+Get an API key from your preferred provider. See [PROVIDERS.md](PROVIDERS.md) for the list of supported providers.
 
-To install WSL: Open PowerShell as Administrator and run:
-```powershell
-wsl --install
-```
+### Telegram Bot
 
-Restart your computer, then open "Ubuntu" from the Start menu.
+1. Message [@BotFather](https://t.me/botfather) on Telegram
+2. Send `/newbot`
+3. Follow prompts to name your bot
+4. Copy the token
 
-### Option B: PowerShell
+### Your Telegram User ID
 
-If you don't want to use WSL:
+1. Message [@userinfobot](https://t.me/userinfobot) on Telegram
+2. It replies with your user ID (a number)
 
-1. Install [Node.js](https://nodejs.org) (LTS version)
-2. Open PowerShell
-3. Install Railway CLI:
-   ```powershell
-   npm install -g @railway/cli
-   ```
-4. Continue with the steps below - commands are the same
+### Discord Bot (alternative)
 
-**Note:** WSL is recommended because some Railway CLI features work more reliably in a Linux environment.
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create New Application → Bot → Add Bot
+3. Copy the token
+4. Enable Message Content Intent under Privileged Gateway Intents
+5. Your user ID: Enable Developer Mode in Discord settings, right-click yourself, Copy ID
 
-## Step 1: Deploy to Railway
+### Slack Bot (alternative)
+
+1. Go to [Slack API](https://api.slack.com/apps)
+2. Create New App → From scratch
+3. Add OAuth scopes under OAuth & Permissions
+4. Install to workspace
+5. Copy Bot Token (`xoxb-...`) and App Token (`xapp-...`)
+
+## Step 2: Deploy to Railway
 
 ### Option A: One-Click Deploy
 
@@ -45,197 +52,116 @@ If you don't want to use WSL:
 ### Option B: From GitHub
 
 1. Fork this repository
-2. In Railway, create new project → Deploy from GitHub repo
+2. In Railway: New Project → Deploy from GitHub
 3. Select your fork
 
-## Step 2: Set Environment Variables
+## Step 3: Set Environment Variables
 
-In Railway Dashboard → Your Service → Variables, add:
+In Railway Dashboard → Your Service → Variables:
 
 **Required:**
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+YOUR_PROVIDER_API_KEY=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_OWNER_ID=...
 ```
 
-**For Telegram:**
-```
-TELEGRAM_BOT_TOKEN=123456:ABC-...
-```
+Replace `YOUR_PROVIDER_API_KEY` with the appropriate variable for your provider (see [PROVIDERS.md](PROVIDERS.md)).
 
-**For Discord:**
+See [config/environment.md](../config/environment.md) for all options.
+
+## Step 4: Deploy
+
+Click Deploy. Wait for the build to complete.
+
+Check the logs for:
 ```
-DISCORD_BOT_TOKEN=...
-```
-
-See [PROVIDERS.md](PROVIDERS.md) for other LLM providers.
-
-## Step 3: Wait for Deploy
-
-Railway will build the container (takes 5-10 minutes first time).
-
-Check the deployment logs for:
-```
-[entrypoint] Starting OpenClaw Railway...
-[entrypoint] No config found - run 'openclaw onboard' via SSH
+[entrypoint] Building config from environment variables...
+[entrypoint] Gateway started successfully
 [openclaw] Health server on :8080
 ```
 
-## Step 4: SSH and Configure
+## Step 5: Message Your Bot
 
-```bash
-# Login to Railway CLI
-railway login
+Open your channel (Telegram, Discord, Slack) and message your bot.
 
-# Link to your project
-railway link
+You should get a response immediately - no pairing needed because your owner ID is pre-approved.
 
-# SSH into the container
-railway ssh
-```
+## Done
 
-## Step 5: Run Onboard
-
-Inside the container:
-
-```bash
-openclaw onboard
-```
-
-The wizard will ask:
-
-1. **LLM Provider** → Select your provider (Anthropic, OpenAI, etc.)
-2. **API Key** → It should auto-detect from environment variable
-3. **Gateway bind** → Select `Loopback (127.0.0.1)`
-4. **Gateway auth** → Select `Token`
-5. **Gateway token** → Leave blank to auto-generate
-6. **Channels** → Configure Telegram/Discord/etc.
-
-## Step 6: Verify Gateway Started
-
-```bash
-ps aux | grep gateway
-```
-
-Should show `openclaw-gateway` running.
-
-If not, check logs:
-```bash
-cat /data/.openclaw/gateway.log
-```
-
-## Step 7: Message Your Bot
-
-Open Telegram/Discord and message your bot. First message triggers pairing.
-
-## Step 8: Approve Pairing
-
-The bot will reply with a pairing code. Approve it:
-
-```bash
-openclaw pairing approve telegram <code>
-```
-
-## Step 9: Harden Security
-
-Run the security audit:
-
-```bash
-openclaw security audit --deep --fix
-```
-
-See [SECURITY.md](SECURITY.md) for full hardening guide.
-
-## Done!
-
-Your bot is now running. You can exit SSH:
-
-```bash
-exit
-```
-
-The bot continues running in Railway.
+Your bot is running. Start chatting.
 
 ---
 
-## Common Issues
+## Troubleshooting
 
 ### Bot doesn't respond
 
-1. Check gateway is running: `ps aux | grep gateway`
-2. Check gateway logs: `cat /data/.openclaw/gateway.log`
-3. Verify bot token is correct in Railway variables
+1. Check Railway logs for errors
+2. Verify bot token is correct
+3. Verify owner ID is correct
+4. Make sure you're messaging the bot directly (not in a group)
 
-### "API key not found"
+### "No LLM provider API key set"
 
-Ensure environment variable is set in Railway Dashboard, not just in config file.
+Add a provider API key to environment variables.
 
 ### Gateway won't start
 
-Check logs for specific error:
+Check logs:
 ```bash
+railway ssh
 cat /data/.openclaw/gateway.log
 ```
 
-Common causes:
-- Missing API key
-- Invalid bot token
-- Port already in use
+### Need to change config
 
-### Pairing code not appearing
-
-1. Make sure you're messaging the bot directly (not in a group)
-2. Check `dmPolicy` is set to `pairing` not `disabled`
-
-### Container keeps restarting
-
-Check health endpoint is responding:
+SSH in and edit:
 ```bash
-curl http://localhost:8080/healthz
-```
-
-Should return `OK`.
-
----
-
-## Updating OpenClaw
-
-SSH in and run:
-
-```bash
-openclaw update
-```
-
-Then restart the gateway:
-
-```bash
+railway ssh
+nano /data/.openclaw/openclaw.json
 pkill -f "openclaw gateway"
 openclaw gateway run --port 18789 &
 ```
 
+Or delete and redeploy:
+```bash
+railway ssh
+rm /data/.openclaw/openclaw.json
+exit
+railway up
+```
+
 ---
 
-## Useful Commands
+## Updating
+
+Redeploy the container:
 
 ```bash
-# View gateway status
-ps aux | grep gateway
-
-# View gateway logs
-cat /data/.openclaw/gateway.log
-
-# View config
-cat /data/.openclaw/openclaw.json
-
-# Restart gateway
-pkill -f "openclaw gateway"
-openclaw gateway run --port 18789 &
-
-# List approved users
-cat /data/.openclaw/credentials/*-allowFrom.json
-
-# Security audit
-openclaw security audit --deep
-
-# Update OpenClaw
-openclaw update
+railway up
 ```
+
+Do not run `openclaw update` inside the container.
+
+---
+
+## Adding Other Users
+
+Your owner ID is pre-approved. For others:
+
+1. They message your bot
+2. They receive a pairing code
+3. You approve via SSH:
+   ```bash
+   railway ssh
+   openclaw pairing approve telegram <CODE>
+   ```
+
+---
+
+## Next Steps
+
+- [Security Tiers](TIERS.md) - Unlock more capabilities
+- [Security Model](SECURITY.md) - Understand protections
+- [Providers](PROVIDERS.md) - Provider configuration

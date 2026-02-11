@@ -1,0 +1,88 @@
+// OpenClaw Railway Template - Secure Defaults
+// This is the Tier 0 configuration: conversation + notes only
+//
+// To unlock more capabilities, see the documentation:
+// - Tier 1: Add web search/fetch
+// - Tier 2: Add shell access (allowlist)
+// - Tier 3: Add API integrations
+// - Tier 4: Full trust mode
+{
+  // Agent defaults - locked down
+  agents: {
+    defaults: {
+      tools: {
+        // Only allow file operations and memory
+        allow: [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ],
+        // Block everything dangerous
+        deny: [
+          "exec",
+          "process",
+          "browser",
+          "nodes",
+          "web_search",
+          "web_fetch",
+          "gateway",
+          "agents_list",
+          "sessions_spawn"
+        ]
+      },
+      // No Docker sandbox on Railway - rely on tool restrictions
+      sandbox: {
+        mode: "off"
+      }
+    }
+  },
+
+  // Tool-level restrictions
+  tools: {
+    // Elevated mode disabled - no host exec escape
+    elevated: {
+      enabled: false
+    },
+    // If exec ever gets enabled, require allowlist + approval
+    exec: {
+      security: "allowlist",
+      ask: "always"
+    }
+  },
+
+  // Session isolation - each user gets their own context
+  session: {
+    dmScope: "per-channel-peer"
+  },
+
+  // Gateway security
+  gateway: {
+    bind: "loopback",
+    auth: {
+      mode: "token"
+    }
+  },
+
+  // Channel defaults - require pairing for DMs, mention in groups
+  channels: {
+    telegram: {
+      dmPolicy: "pairing",
+      requireMention: true
+    },
+    discord: {
+      dmPolicy: "pairing",
+      requireMention: true
+    },
+    slack: {
+      dmPolicy: "pairing",
+      requireMention: true
+    }
+  },
+
+  // Logging - redact sensitive data
+  logging: {
+    redactSensitive: "tools"
+  }
+}

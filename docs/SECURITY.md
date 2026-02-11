@@ -1,224 +1,162 @@
-# OpenClaw Security Guide
+# Security Model
 
-This guide covers how to harden your OpenClaw Railway deployment.
+This template ships with secure defaults. This document explains what's protected and how.
 
-## Quick Hardening Checklist
+## The Three Security Layers
 
-Run after `openclaw onboard`:
+OpenClaw has three complementary security mechanisms:
 
-```bash
-# Run the built-in security audit
-openclaw security audit --deep --fix
-```
+| Layer | What It Does | Works on Railway? |
+|-------|--------------|-------------------|
+| **Tool Policy** | Controls which tools agents can use | Yes |
+| **Sandbox** | Isolates execution in Docker containers | No (requires Docker-in-Docker) |
+| **Elevated Mode** | Escape hatch for host exec when sandboxed | Yes (disabled by default) |
 
-This automatically fixes common security issues.
+Since Railway doesn't support Docker-in-Docker, this template relies on **Tool Policy** as the primary security mechanism.
 
-## Environment Variables (Railway)
+## Default Configuration (Tier 0)
 
-**Never store API keys in the config file.** Use Railway's environment variables instead.
+Out of the box, your agent can only:
+- Chat via messaging channels
+- Read/write files in the workspace
+- Search and retrieve memories
 
-In Railway Dashboard → Variables, add:
+Everything else is blocked:
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `OPENAI_API_KEY` | Your OpenAI API key (if using) |
-| `GEMINI_API_KEY` | Your Google Gemini API key (if using) |
-| `TELEGRAM_BOT_TOKEN` | From @BotFather |
-| `DISCORD_BOT_TOKEN` | From Discord Developer Portal |
-
-Railway encrypts these at rest. They're injected at runtime, never written to disk.
-
-## Sandboxing
-
-Sandbox mode isolates agent execution in Docker containers. This prevents a compromised agent from accessing your system.
-
-### Configuration
-
-In `openclaw.json` (or via `openclaw configure`):
-
-```json
+```json5
 {
-  "agents": {
-    "defaults": {
-      "sandbox": {
-        "mode": "non-main",
-        "workspaceAccess": "rw"
+  agents: {
+    defaults: {
+      tools: {
+        allow: ["read", "write", "edit", "memory_search", "memory_get"],
+        deny: ["exec", "process", "browser", "nodes", "web_search", "web_fetch", "gateway", "agents_list", "sessions_spawn"]
       }
     }
   }
 }
 ```
 
-### Sandbox Modes
+## What Each Blocked Tool Does
 
-| Mode | Description |
-|------|-------------|
-| `off` | No sandboxing (default) |
-| `non-main` | Sandbox channels (Telegram, Discord) but not direct CLI |
-| `all` | Sandbox everything including CLI |
+| Tool | Risk | Why It's Blocked |
+|------|------|------------------|
+| `exec` | Critical | Run arbitrary shell commands |
+| `process` | Critical | Manage background processes, bypass approval |
+| `browser` | High | Access logged-in sessions, run JavaScript |
+| `nodes` | High | Camera/screen capture, device control |
+| `web_search` | Medium | External network access |
+| `web_fetch` | Medium | Fetch arbitrary URLs |
+| `gateway` | Critical | Modify gateway configuration |
+| `agents_list` | Medium | Enumerate other agents |
+| `sessions_spawn` | Medium | Create unlimited subagents |
 
-### Workspace Access
+## Access Control
 
-| Setting | Description |
-|---------|-------------|
-| `none` | Agent cannot access workspace files |
-| `ro` | Read-only access to workspace |
-| `rw` | Read-write access to workspace |
+### Owner Allowlist
 
-**Recommendation:** Use `mode: "non-main"` with `workspaceAccess: "rw"` for channels.
+When you set `TELEGRAM_OWNER_ID` (or Discord/Slack equivalent), you're added to the allowlist. You can message the bot immediately without pairing.
 
-## Tool Permissions
+### Pairing for Others
 
-Restrict which tools agents can use.
+Anyone else who messages the bot gets a pairing code. They must share it with you, and you approve via SSH:
 
-### Tool Profiles
+```bash
+openclaw pairing approve telegram <CODE>
+```
 
-```json
+Or set `dmPolicy: "allowlist"` and manually add user IDs.
+
+### Session Isolation
+
+Each user gets their own conversation context:
+
+```json5
 {
-  "tools": {
-    "profile": "coding"
+  session: {
+    dmScope: "per-channel-peer"
   }
 }
 ```
 
-| Profile | Tools Included |
-|---------|----------------|
-| `minimal` | Only `session_status` |
-| `coding` | File system, runtime, sessions, memory |
-| `messaging` | Messaging and session tools |
-| `full` | All tools (default) |
-
-### Allowlist Specific Commands
-
-```json
-{
-  "tools": {
-    "exec": {
-      "enabled": true,
-      "security": "sandbox",
-      "ask": "always",
-      "allowlist": [
-        "ls", "cat", "grep", "find", "head", "tail"
-      ]
-    }
-  }
-}
-```
-
-### Block Sensitive Paths
-
-```json
-{
-  "tools": {
-    "fs": {
-      "enabled": true,
-      "blocklist": [".ssh", ".aws", ".env", ".openclaw"]
-    }
-  }
-}
-```
-
-## Channel Security
-
-### Pairing (Recommended)
-
-Require approval before anyone can message your bot:
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "dmPolicy": "pairing",
-      "groupPolicy": "allowlist"
-    }
-  }
-}
-```
-
-When someone messages your bot:
-1. Bot sends them a pairing code
-2. They share the code with you
-3. You approve: `openclaw pairing approve telegram <code>`
-
-### DM Policies
-
-| Policy | Description |
-|--------|-------------|
-| `pairing` | Require approval (recommended) |
-| `allowlist` | Only pre-approved users |
-| `open` | Anyone can message (dangerous) |
-| `disabled` | Ignore all DMs |
-
-## Session Isolation
-
-Prevent conversation context leaking between users:
-
-```json
-{
-  "sessions": {
-    "dmScope": "per-channel-peer"
-  }
-}
-```
-
-| Scope | Description |
-|-------|-------------|
-| `per-channel-peer` | Each user gets isolated context (recommended) |
-| `global` | All users share context (dangerous) |
+User A cannot see User B's conversation history.
 
 ## Gateway Security
 
-The gateway should never be exposed publicly:
+The gateway is bound to loopback only:
 
-```json
+```json5
 {
-  "gateway": {
-    "bind": "loopback",
-    "auth": {
-      "mode": "token"
-    }
+  gateway: {
+    bind: "loopback",
+    auth: { mode: "token" }
   }
 }
 ```
 
-## File Permissions
+This means:
+- Gateway is not accessible from outside the container
+- Token authentication required for any connection
+- Health endpoint (`/healthz`) reveals nothing sensitive
 
-OpenClaw stores sensitive data in `~/.openclaw/`. Ensure proper permissions:
+## What Railway Protects
+
+Railway's container provides hard boundaries:
+
+| Protection | Description |
+|------------|-------------|
+| Container isolation | Agent cannot escape to Railway host |
+| Network isolation | No access to other Railway services |
+| Volume isolation | `/data` is your persistent storage only |
+| Secret injection | Env vars injected at runtime, not stored in image |
+
+## What Railway Cannot Protect
+
+| Risk | Mitigation |
+|------|------------|
+| Prompt injection | Tool policy limits blast radius |
+| API key theft | Keys in env vars, not accessible if `exec` blocked |
+| Data exfiltration | No network tools by default |
+| Resource exhaustion | Railway's resource limits apply |
+
+## Unlocking More Capabilities
+
+See [TIERS.md](TIERS.md) for how to progressively enable:
+- Web search (Tier 1)
+- Shell access with allowlist (Tier 2)
+- Automation and subagents (Tier 3)
+- Full trust (Tier 4)
+
+## Security Audit
+
+SSH in and run:
 
 ```bash
-chmod 700 ~/.openclaw
-chmod 600 ~/.openclaw/*.json
-chmod 700 ~/.openclaw/credentials
-```
-
-The entrypoint script handles this automatically for Railway.
-
-## Regular Maintenance
-
-```bash
-# Monthly security audit
 openclaw security audit --deep
-
-# Check for updates
-openclaw update
-
-# Review pairing allowlists
-cat ~/.openclaw/credentials/*-allowFrom.json
 ```
+
+This checks for common misconfigurations.
 
 ## Dangerous Configurations
 
 **Never do these:**
 
-- `gateway.bind: "lan"` or `"0.0.0.0"` - Exposes gateway to network
-- `channels.*.dmPolicy: "open"` - Anyone can use your bot
-- `sandbox.mode: "off"` with untrusted channels
-- Store API keys in `openclaw.json` instead of env vars
-- Share your `openclaw.json` file
+| Configuration | Risk |
+|---------------|------|
+| `gateway.bind: "lan"` | Exposes gateway to network |
+| `gateway.bind: "0.0.0.0"` | Exposes gateway to internet |
+| `dmPolicy: "open"` | Anyone can use your bot |
+| `tools.deny: []` | All tools available |
+| `elevated.enabled: true` | Host exec escape available |
+| API keys in config file | Stored on disk, potentially leaked |
+
+## Environment Variables
+
+API keys and tokens should always be set as Railway environment variables, not in `openclaw.json`. Railway encrypts these at rest and injects them at runtime.
+
+See [config/environment.md](../config/environment.md) for the full list.
 
 ## Further Reading
 
 - [OpenClaw Security Docs](https://docs.openclaw.ai/gateway/security)
-- [Sandboxing Guide](https://docs.openclaw.ai/concepts/sandboxing)
-- [Tool Security](https://docs.openclaw.ai/tools/security)
+- [Tool Policy vs Sandbox vs Elevated](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated)
+- [Threat Model](THREAT-MODEL.md)

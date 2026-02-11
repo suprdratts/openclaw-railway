@@ -1,42 +1,45 @@
 # OpenClaw Railway Template
 
-Minimal, secure OpenClaw deployment for Railway.
-
-## Features
-
-- **Non-root container** - Runs as uid 1001
-- **Gateway on loopback** - Never exposed publicly
-- **Secure file permissions** - 700/600 on sensitive files
-- **No dependencies** - Health server is ~30 lines of code
-- **Environment variable secrets** - API keys never stored in config files
+Deploy an AI assistant to Railway. No SSH required.
 
 ## Quick Start
 
-1. Deploy to Railway
-2. SSH in: `railway ssh`
-3. Run: `openclaw onboard`
-4. Message your bot on Telegram/Discord
-
-## Documentation
-
-| Guide | Description |
-|-------|-------------|
-| [Setup Guide](docs/SETUP.md) | Step-by-step deployment instructions |
-| [Security Guide](docs/SECURITY.md) | Hardening and best practices |
-| [Provider Setup](docs/PROVIDERS.md) | LLM provider configuration |
-| [Sandboxing](docs/SANDBOXING.md) | Agent isolation options |
+1. **Deploy to Railway** - Fork this repo or use the deploy button
+2. **Set environment variables:**
+   - One LLM provider API key
+   - One channel token (Telegram, Discord, or Slack)
+   - Your user ID for that channel
+3. **Deploy** - Message your bot and start chatting
 
 ## Environment Variables
 
-Set these in Railway Dashboard → Variables:
+See [config/environment.md](config/environment.md) for the complete reference.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes* | Anthropic API key |
-| `TELEGRAM_BOT_TOKEN` | For Telegram | From @BotFather |
-| `DISCORD_BOT_TOKEN` | For Discord | From Developer Portal |
+### Required
 
-*Or another LLM provider's key. See [Provider Setup](docs/PROVIDERS.md).
+| Variable | Description |
+|----------|-------------|
+| `*_API_KEY` | At least one LLM provider key |
+| `*_BOT_TOKEN` | At least one channel token |
+| `*_OWNER_ID` | Your user ID for instant access |
+
+### Example
+
+```
+OPENROUTER_API_KEY=sk-or-...
+TELEGRAM_BOT_TOKEN=123456789:ABC...
+TELEGRAM_OWNER_ID=987654321
+```
+
+## What You Get
+
+**Default Security:**
+- Conversation and note-taking only
+- No shell access, no web browsing
+- Session isolation per user
+- Owner pre-approved, others require pairing
+
+**Unlock More:** See [docs/TIERS.md](docs/TIERS.md)
 
 ## Architecture
 
@@ -45,43 +48,31 @@ Set these in Railway Dashboard → Variables:
 │                 RAILWAY CONTAINER                    │
 │                                                      │
 │  Health Server (:8080)     Gateway (:18789)         │
-│  - /healthz endpoint       - Runs on loopback       │
-│  - No sensitive info       - Handles channels       │
-│                            - Runs agents            │
+│  - /healthz endpoint       - Loopback only          │
+│  - Public facing           - Handles channels       │
 │                                                      │
-│  Volume: /data/.openclaw                            │
+│  Config: /data/.openclaw/openclaw.json              │
+│  Workspace: /data/workspace                         │
 └─────────────────────────────────────────────────────┘
 ```
 
-## Security Model
+## Documentation
 
-| Layer | Protection |
-|-------|------------|
-| API Keys | Stored in Railway env vars (encrypted at rest) |
-| Gateway | Bound to loopback only |
-| Channels | Pairing required by default |
-| Config | 600 permissions (user read/write only) |
+| Guide | Description |
+|-------|-------------|
+| [Environment Variables](config/environment.md) | All supported env vars |
+| [Setup Guide](docs/SETUP.md) | Step-by-step deployment |
+| [Security Tiers](docs/TIERS.md) | Unlocking capabilities |
+| [Security Model](docs/SECURITY.md) | How protection works |
+| [Providers](docs/PROVIDERS.md) | LLM provider configuration |
+| [Threat Model](docs/THREAT-MODEL.md) | What can go wrong |
 
-## Useful Commands
+## Updating
+
+Redeploy the container:
 
 ```bash
-# SSH into container
-railway ssh
-
-# Check gateway status
-ps aux | grep gateway
-
-# View logs
-cat /data/.openclaw/gateway.log
-
-# Security audit
-openclaw security audit --deep --fix
-
-# Approve pairing
-openclaw pairing approve telegram <code>
-
-# Update OpenClaw
-openclaw update
+railway up
 ```
 
 ## License

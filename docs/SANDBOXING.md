@@ -171,15 +171,46 @@ Different sandbox settings per channel:
 }
 ```
 
-## Docker Requirements
+## Railway: The Container IS Your Sandbox
 
-Sandboxing requires Docker. On Railway, Docker-in-Docker is not available by default.
+On Railway, OpenClaw's Docker-based sandboxing won't work because Railway doesn't expose Docker to your container. But here's the thing: **the Railway container itself is already a sandbox**.
 
-**For Railway deployments:** Sandboxing may not work without additional configuration. Consider using tool restrictions instead.
+Your agent cannot:
+- Escape the container
+- Access Railway's host system
+- Affect other Railway users
+- Touch your local machine
 
-## Alternative: Tool Restrictions
+What OpenClaw's sandboxing would add is isolating *each agent session* in its own throwaway container - useful if multiple untrusted users share your bot. For a personal bot, the Railway container boundary is sufficient.
 
-If sandboxing isn't available, restrict dangerous tools:
+**The security model for Railway:**
+
+| Layer | What It Does |
+|-------|--------------|
+| Railway container | Hard boundary - agent can't escape |
+| Tool restrictions | Limits what agent can do inside |
+| Pairing | Controls who can use the bot |
+
+This is a reasonable security posture for personal use.
+
+## Tool Restrictions (Railway's Alternative)
+
+Instead of Docker sandboxing, restrict what tools the agent can use:
+
+### Configure via Bot
+
+You can configure this by asking your bot directly:
+- "Show me the current tool restrictions"
+- "Only allow read-only file operations"
+- "Block access to .ssh and .env directories"
+
+### Configure via CLI
+
+```bash
+openclaw configure --section tools
+```
+
+### Configure via Config File
 
 ```json
 {

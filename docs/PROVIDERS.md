@@ -1,161 +1,78 @@
-# LLM Provider Setup
+# LLM Providers
 
-This guide covers how to configure LLM providers for OpenClaw.
+Configure your preferred LLM provider via environment variables.
 
-## Anthropic (Recommended)
+## Setting Up a Provider
 
-The most reliable option for OpenClaw.
+1. Get an API key from your chosen provider
+2. Set the corresponding environment variable in Railway
+3. Optionally set `LLM_PRIMARY_MODEL` to specify which model to use
 
-### Option 1: API Key (Simplest)
+## Supported Providers
 
-1. Get API key from [console.anthropic.com](https://console.anthropic.com)
-2. In Railway Dashboard → Variables, add:
-   ```
-   ANTHROPIC_API_KEY=sk-ant-...
-   ```
-3. During `openclaw onboard`, select Anthropic and it will use the env var
+| Provider | Environment Variable | Example Model Format |
+|----------|---------------------|---------------------|
+| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/provider/model` |
+| Groq | `GROQ_API_KEY` | `groq/model-name` |
+| Together AI | `TOGETHER_API_KEY` | `together/org/model` |
+| Venice AI | `VENICE_API_KEY` | `venice/model-name` |
+| Google AI | `GOOGLE_AI_API_KEY` | `google/model-name` |
+| Mistral | `MISTRAL_API_KEY` | `mistral/model-name` |
+| OpenAI | `OPENAI_API_KEY` | `openai/model-name` |
+| Anthropic | `ANTHROPIC_API_KEY` | `anthropic/model-name` |
+| xAI | `XAI_API_KEY` | `xai/model-name` |
+| DeepSeek | `DEEPSEEK_API_KEY` | `deepseek/model-name` |
+| Cloudflare | `CLOUDFLARE_API_KEY` | `cloudflare/model-name` |
 
-### Option 2: Claude Code CLI
+## Model Configuration
 
-If you have Claude Pro/Max subscription:
+### Primary Model
 
-```bash
-# In Railway SSH
-npm install -g @anthropic-ai/claude-code
-claude setup-token
+Set via environment variable:
+```
+LLM_PRIMARY_MODEL=provider/model-name
 ```
 
-Follow the prompts to authenticate.
+### Task-Specific Models
 
-## Google Gemini
+Use different models for different tasks to optimize cost/performance:
 
-### Option 1: API Key (Simplest)
-
-1. Get API key from [aistudio.google.com](https://aistudio.google.com)
-2. In Railway Dashboard → Variables, add:
-   ```
-   GEMINI_API_KEY=your-key-here
-   ```
-
-### Option 2: Google Antigravity OAuth (Recommended for OAuth)
-
-```bash
-# Enable the plugin
-openclaw plugins enable google-antigravity-auth
-
-# Authenticate
-openclaw models auth login --provider google-antigravity --set-default
+```
+LLM_PRIMARY_MODEL=provider/smart-model
+LLM_HEARTBEAT_MODEL=provider/cheap-model
+LLM_SUBAGENT_MODEL=provider/balanced-model
 ```
 
-Opens browser for Google login. After approval, you'll see "authentication completed".
+### Fallback Models
 
-### Option 3: Gemini CLI OAuth
+Comma-separated list of fallbacks if primary fails:
 
-**Note:** There's a known issue where this fails due to missing `client_secret`. Use Antigravity OAuth or API key instead.
-
-```bash
-# This may not work - known issue #4585
-openclaw plugins enable google-gemini-cli-auth
-openclaw models auth login --provider google-gemini-cli
+```
+LLM_FALLBACK_MODELS=provider1/model1,provider2/model2
 ```
 
-### Gemini Quota Notes
+## Multiple Providers
 
-- Quotas are tracked per model (e.g., `gemini-3-pro` vs `gemini-3-flash`)
-- OAuth doesn't support cached content - long prompts burn quota fast
-- For paid quotas, set `OPENCODE_GEMINI_PROJECT_ID` environment variable
+You can set multiple provider API keys. The agent will use whichever provider matches the model you specify.
 
-## OpenAI
+## Cost Considerations
 
-### API Key
-
-1. Get API key from [platform.openai.com](https://platform.openai.com)
-2. In Railway Dashboard → Variables, add:
-   ```
-   OPENAI_API_KEY=sk-...
-   ```
-
-## OpenRouter (Multi-Provider)
-
-Access multiple models through one API:
-
-1. Get API key from [openrouter.ai](https://openrouter.ai)
-2. In Railway Dashboard → Variables, add:
-   ```
-   OPENROUTER_API_KEY=sk-or-v1-...
-   ```
-
-Models available: Claude, GPT-4, Gemini, Llama, Mistral, and more.
-
-## Groq (Fast Inference)
-
-1. Get API key from [console.groq.com](https://console.groq.com)
-2. In Railway Dashboard → Variables, add:
-   ```
-   GROQ_API_KEY=gsk_...
-   ```
-
-## Local Models (Ollama)
-
-For self-hosted models:
-
-```json
-{
-  "providers": {
-    "ollama": {
-      "baseUrl": "http://localhost:11434"
-    }
-  }
-}
-```
-
-## Setting Default Model
-
-During `openclaw onboard`, or manually:
-
-```bash
-openclaw configure --section models
-```
-
-Or in `openclaw.json`:
-
-```json
-{
-  "agents": {
-    "defaults": {
-      "model": "anthropic/claude-opus-4-5"
-    }
-  }
-}
-```
-
-## Model Format
-
-Models are specified as `provider/model-name`:
-
-| Provider | Example Model |
-|----------|---------------|
-| Anthropic | `anthropic/claude-opus-4-5` |
-| OpenAI | `openai/gpt-4o` |
-| Google | `google/gemini-3-pro` |
-| OpenRouter | `openrouter/anthropic/claude-3-opus` |
-| Groq | `groq/llama-3.3-70b-versatile` |
-| Ollama | `ollama/llama3` |
+- Check your provider's pricing before use
+- Set spending limits in your provider's dashboard
+- Consider using different models for different tasks (cheap for heartbeat, smart for main work)
 
 ## Troubleshooting
 
 ### "API key not found"
+Ensure the environment variable is set in Railway Dashboard.
 
-Ensure the environment variable is set in Railway Dashboard, not just locally.
+### "Model not found"
+Check the model name format matches your provider's expectations.
 
-### OAuth browser doesn't open
+### Switching providers
+Update the environment variable and redeploy, or SSH in and update the config.
 
-In Railway SSH, OAuth requires a browser. Use API key method instead, or run OAuth locally then copy credentials.
+## Further Reading
 
-### "Rate limited"
-
-You've hit the provider's rate limit. Wait, or upgrade your plan.
-
-### Gemini CLI OAuth fails
-
-Known issue. Use Google Antigravity OAuth or API key instead.
+- [OpenClaw Providers Docs](https://docs.openclaw.ai/providers)
+- [OpenClaw Configuration](https://docs.openclaw.ai/gateway/configuration)

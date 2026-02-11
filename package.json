@@ -1,11 +1,11 @@
 {
   "name": "openclaw-railway",
   "version": "1.0.0",
-  "description": "OpenClaw Railway template",
+  "description": "OpenClaw Railway template - secure AI assistant deployment",
   "private": true,
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "bun run src/server.js"
+    "start": "node src/server.js"
   }
 }
