@@ -89,6 +89,14 @@ Check your provider's documentation for current model IDs:
 - **Kimi/Moonshot**: https://platform.moonshot.cn/docs
 - **ZAI**: https://docs.zai.dev/models
 
+### Changing Models Later
+
+- **Quick experiment:** Use `/model` in chat to try a different model for the current session (resets when the session ends)
+- **Permanent change:** Update `LLM_PRIMARY_MODEL` here and redeploy
+- **Permanent without redeploy:** SSH in and run `openclaw models set provider/model-name` (Tier 2+)
+
+See [PROVIDERS.md](../docs/PROVIDERS.md) for more details.
+
 **Tip:** Start with a fast, cheap model to verify your setup works, then upgrade as needed.
 
 ## Channels

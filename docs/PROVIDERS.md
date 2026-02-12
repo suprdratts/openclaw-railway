@@ -33,7 +33,7 @@ Set via environment variable:
 LLM_PRIMARY_MODEL=provider/model-name
 ```
 
-### Task-Specific Models
+### Task-Specific Models (Tier 2+)
 
 Use different models for different tasks to optimize cost/performance:
 
@@ -51,23 +51,58 @@ Comma-separated list of fallbacks if primary fails:
 LLM_FALLBACK_MODELS=provider1/model1,provider2/model2
 ```
 
+## Changing Models
+
+There are three ways to change your model, depending on what you need:
+
+### 1. `/model` in chat (temporary)
+
+Type `/model` in Telegram/Discord/Slack to see available models and switch. This is great for experimenting, but **only lasts for the current session** — it resets when the conversation ends.
+
+### 2. Railway environment variable (permanent, requires redeploy)
+
+Change `LLM_PRIMARY_MODEL` in Railway Dashboard → Variables, then redeploy. This is the simplest way to make a permanent change at Tier 0.
+
+### 3. `openclaw models set` via SSH (permanent, no redeploy — Tier 2+)
+
+```bash
+railway ssh
+openclaw models set provider/model-name
+```
+
+This writes to a separate models config file and takes effect immediately without restarting. Requires SSH access (Tier 2+).
+
 ## Multiple Providers
 
 You can set multiple provider API keys. The agent will use whichever provider matches the model you specify.
 
+## OAuth Providers
+
+Some providers (e.g., Google AI via Vertex, Gemini CLI) use OAuth instead of API keys. These require SSH access to complete the authentication flow (generate URLs, paste redirect codes), so they're only practical at Tier 2+.
+
+API-key providers work at all tiers.
+
 ## Cost Considerations
 
-- Check your provider's pricing before use
-- Set spending limits in your provider's dashboard
-- Consider using different models for different tasks (cheap for heartbeat, smart for main work)
+Costs vary significantly by provider, model, and how much you use the agent. There's no universal answer to "how much will this cost?"
+
+**What you should do:**
+- Check your provider's pricing page before choosing a model
+- Set spending limits or alerts in your provider's dashboard — most providers support this
+- Monitor your usage for the first few days to establish a baseline
+
+**Cost optimization:**
+- Use a cheaper/faster model for `LLM_HEARTBEAT_MODEL` (periodic check-ins don't need your smartest model)
+- Use a balanced model for `LLM_SUBAGENT_MODEL` (Tier 3) — subagents do focused tasks, not open-ended conversation
+- Aggregators like OpenRouter let you compare pricing across providers for the same model family
 
 ## Troubleshooting
 
 ### "API key not found"
 Ensure the environment variable is set in Railway Dashboard.
 
-### "Model not found"
-Check the model name format matches your provider's expectations.
+### "Model not found" / "Unknown model"
+Check the model name format matches your provider's expectations. OpenClaw validates models against an internal registry — very new models may not be recognized until OpenClaw updates. At Tier 2+, you can define custom models via `models.providers` in the config. See [OpenClaw Model Providers](https://docs.openclaw.ai/concepts/model-providers) for details.
 
 ### Switching providers
 Update the environment variable and redeploy, or SSH in and update the config.
