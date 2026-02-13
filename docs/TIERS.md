@@ -175,7 +175,7 @@ Update the config:
         deny: ["process", "browser", "nodes", "gateway", "agents_list"]
       },
       subagents: {
-        model: "groq/llama-3.1-8b-instant",  // Use cheaper model for subagents
+        model: "provider/cheap-model",  // Use a cheaper model for subagents
         maxConcurrent: 2
       }
     }

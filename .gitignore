@@ -21,3 +21,10 @@ Thumbs.db
 
 # Runtime
 /data/
+
+# Internal docs (local only, not shipped with template)
+/internal/
+
+# Local dev config
+CLAUDE.md
+.claude/
