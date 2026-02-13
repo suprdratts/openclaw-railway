@@ -34,25 +34,34 @@ Each tier is earned by hitting the ceiling naturally — not upsold. When you fi
 - Gateway access (`gateway`)
 
 **Config:**
+**openclaw.json:**
 ```json5
 {
-  agents: {
-    defaults: {
-      tools: {
-        allow: ["read", "write", "edit", "memory_get", "exec"],
-        deny: ["process", "browser", "nodes", "web_search", "web_fetch", "gateway", "memory_search", "agents_list", "sessions_spawn"]
-      }
-    }
-  },
   tools: {
+    allow: ["read", "write", "edit", "memory_get", "exec"],
+    deny: ["process", "browser", "nodes", "web_search", "web_fetch", "gateway", "memory_search", "agents_list", "sessions_spawn"],
     exec: {
+      host: "gateway",
       security: "allowlist",
-      ask: "never",
-      allowlist: ["/usr/bin/ls", "/bin/ls"]
-    },
-    fs: {
-      enabled: true,
-      blocklist: ["/proc", "/etc", "/root", "/home", ".openclaw", ".ssh", ".aws", ".env"]
+      ask: "off"
+    }
+  }
+}
+```
+
+**exec-approvals.json** (deployed to `~/.openclaw/exec-approvals.json`):
+```json5
+{
+  version: 1,
+  agents: {
+    main: {
+      security: "allowlist",
+      ask: "off",
+      askFallback: "deny",
+      allowlist: [
+        { pattern: "/usr/bin/ls" },
+        { pattern: "/bin/ls" }
+      ]
     }
   }
 }
@@ -129,39 +138,49 @@ Enable restricted shell access for development tasks.
 
 **How to enable:**
 
-Update the config:
+Update **openclaw.json** — add web tools, keep exec in allowlist mode with approval prompts:
 ```json5
 {
-  agents: {
-    defaults: {
-      tools: {
-        allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec"],
-        deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"]
-      }
-    }
-  },
   tools: {
+    allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec"],
+    deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"],
     exec: {
+      host: "gateway",
+      security: "allowlist",
+      ask: "always"
+    }
+  }
+}
+```
+
+Update **exec-approvals.json** (`~/.openclaw/exec-approvals.json`) — expand the allowlist:
+```json5
+{
+  version: 1,
+  agents: {
+    main: {
       security: "allowlist",
       ask: "always",
+      askFallback: "deny",
       allowlist: [
-        "/usr/bin/ls",
-        "/usr/bin/cat",
-        "/usr/bin/head",
-        "/usr/bin/tail",
-        "/usr/bin/grep",
-        "/usr/bin/find",
-        "/usr/bin/wc",
-        "/usr/bin/sort",
-        "/usr/bin/uniq",
-        "/usr/bin/git"
+        { pattern: "/usr/bin/ls" },
+        { pattern: "/bin/ls" },
+        { pattern: "/usr/bin/cat" },
+        { pattern: "/usr/bin/head" },
+        { pattern: "/usr/bin/tail" },
+        { pattern: "/usr/bin/grep" },
+        { pattern: "/usr/bin/find" },
+        { pattern: "/usr/bin/wc" },
+        { pattern: "/usr/bin/sort" },
+        { pattern: "/usr/bin/uniq" },
+        { pattern: "/usr/bin/git" }
       ]
     }
   }
 }
 ```
 
-**Important:** The allowlist uses resolved binary paths. Commands not in the list will be blocked. Chaining (`;`, `&&`, `||`) and redirections are blocked in allowlist mode.
+**Important:** The allowlist uses resolved binary paths (glob patterns). Commands not in the list will be blocked. Chaining (`;`, `&&`, `||`) and redirections are blocked in allowlist mode.
 
 ---
 

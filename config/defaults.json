@@ -11,25 +11,9 @@
       "enabled": false
     },
     "exec": {
+      "host": "gateway",
       "security": "allowlist",
-      "ask": "never",
-      "allowlist": [
-        "/usr/bin/ls",
-        "/bin/ls"
-      ]
-    },
-    "fs": {
-      "enabled": true,
-      "blocklist": [
-        "/proc",
-        "/etc",
-        "/root",
-        "/home",
-        ".openclaw",
-        ".ssh",
-        ".aws",
-        ".env"
-      ]
+      "ask": "off"
     }
   },
   "session": {

@@ -39,7 +39,20 @@ if [ -d "/app/docs" ] && [ ! -d "/data/workspace/docs" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Build config from environment variables (always regenerate)
+# 3. Deploy exec-approvals (allowlist for Tier 0 — ls only)
+# -----------------------------------------------------------------------------
+APPROVALS_SRC="/app/config/exec-approvals.json"
+APPROVALS_DST="/data/.openclaw/exec-approvals.json"
+
+if [ -f "$APPROVALS_SRC" ]; then
+  echo "[entrypoint] Deploying exec-approvals..."
+  cp "$APPROVALS_SRC" "$APPROVALS_DST"
+  chmod 600 "$APPROVALS_DST"
+  chown openclaw:openclaw "$APPROVALS_DST"
+fi
+
+# -----------------------------------------------------------------------------
+# 4. Build config from environment variables (always regenerate)
 # -----------------------------------------------------------------------------
 CONFIG_FILE="/data/.openclaw/openclaw.json"
 
@@ -48,7 +61,7 @@ echo "[entrypoint] Building config from environment variables..."
 node /app/src/build-config.js
 
 # -----------------------------------------------------------------------------
-# 4. Start OpenClaw gateway (if configured)
+# 5. Start OpenClaw gateway (if configured)
 # -----------------------------------------------------------------------------
 start_gateway() {
   echo "[entrypoint] Starting gateway..."
@@ -84,7 +97,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 5. Start health check server (drops to openclaw user)
+# 6. Start health check server (drops to openclaw user)
 # -----------------------------------------------------------------------------
 echo "[entrypoint] Starting health server..."
 exec su openclaw -c "cd /app && node src/server.js"
