@@ -1,7 +1,8 @@
 {
   "agents": {
     "defaults": {
-      "workspace": "/data/workspace"
+      "workspace": "/data/workspace",
+      "blockStreamingBreak": "message_end"
     }
   },
   "tools": {
