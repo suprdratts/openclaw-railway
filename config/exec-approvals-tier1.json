@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "agents": {
+    "main": {
+      "security": "allowlist",
+      "ask": "on-miss",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        {
+          "id": "tier1-ls-usr",
+          "pattern": "/usr/bin/ls",
+          "lastUsedCommand": "ls"
+        },
+        {
+          "id": "tier1-ls-bin",
+          "pattern": "/bin/ls",
+          "lastUsedCommand": "ls"
+        },
+        {
+          "id": "tier1-cat",
+          "pattern": "/usr/bin/cat",
+          "lastUsedCommand": "cat"
+        },
+        {
+          "id": "tier1-head",
+          "pattern": "/usr/bin/head",
+          "lastUsedCommand": "head"
+        },
+        {
+          "id": "tier1-tail",
+          "pattern": "/usr/bin/tail",
+          "lastUsedCommand": "tail"
+        },
+        {
+          "id": "tier1-grep",
+          "pattern": "/usr/bin/grep",
+          "lastUsedCommand": "grep"
+        },
+        {
+          "id": "tier1-find",
+          "pattern": "/usr/bin/find",
+          "lastUsedCommand": "find"
+        },
+        {
+          "id": "tier1-wc",
+          "pattern": "/usr/bin/wc",
+          "lastUsedCommand": "wc"
+        },
+        {
+          "id": "tier1-sort",
+          "pattern": "/usr/bin/sort",
+          "lastUsedCommand": "sort"
+        },
+        {
+          "id": "tier1-uniq",
+          "pattern": "/usr/bin/uniq",
+          "lastUsedCommand": "uniq"
+        },
+        {
+          "id": "tier1-git",
+          "pattern": "/usr/bin/git",
+          "lastUsedCommand": "git"
+        }
+      ]
+    }
+  }
+}

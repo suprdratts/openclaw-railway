@@ -4,42 +4,60 @@
 
 This template ships with a locked-down default configuration. You can progressively unlock more capabilities as your trust and needs grow.
 
-Each tier is earned by hitting the ceiling naturally — not upsold. When you find yourself needing something your agent can't do yet, that's when to consider the next tier.
+Tiers 0-2 are configurable via the `SECURITY_TIER` environment variable in Railway — no SSH required. Tier 3 requires SSH access for elevated permissions.
 
-## Tier 0: Conversation Only (Default)
+## Setting Your Tier
+
+In Railway's dashboard, add the environment variable:
+
+```
+SECURITY_TIER=0   # Personal Assistant (default)
+SECURITY_TIER=1   # Capable Agent
+SECURITY_TIER=2   # Power User
+SECURITY_TIER=3   # Operator (applies Tier 2, guides you to SSH for the rest)
+```
+
+Redeploy after changing. The config regenerates automatically.
+
+---
+
+## Tier 0: Personal Assistant (Default)
 
 **What it can do:**
 - Chat via Telegram/Discord/Slack
 - Read and write files in workspace (markdown notes, memory)
+- Search the web and fetch web pages
+- Semantic memory search (auto-configured if your provider supports embeddings)
 - List directory contents (`ls` only — no other shell commands)
-- Retrieve memories from files (file-based, not semantic search)
+- Schedule cron jobs and reminders
+- Apply patches and work with images
 
 **What this looks like in practice:**
 - "Help me think through this decision" — agent builds a framework, tracks your reasoning over time
+- "What's the latest on X?" — agent searches the web and summarizes findings
+- "Research competitors in this space" — agent compiles a report from multiple sources
 - "Organize my project notes" — agent creates structured markdown, cross-links ideas
-- "Remember that I decided X because of Y" — agent stores it, recalls it weeks later
-- "Draft this email for me" — agent writes, edits, refines with you
-- "Break down this goal into steps" — agent creates a project plan with dependencies
+- "Remember that I decided X because of Y" — agent stores it, finds it semantically later
+- "Set a reminder for tomorrow at 9am" — agent creates a cron job
 
-**When this is enough:** You want a thinking partner, writing assistant, or personal knowledge base. You don't need it to look things up or run commands.
+**When this is enough:** You want a thinking partner, research assistant, or personal knowledge base that can look things up on the web and remember things semantically.
 
 **What's blocked:**
-- Shell commands beyond `ls` (`exec` is allowlisted to `ls` only)
-- Web browsing (`browser`)
-- Web fetching (`web_fetch`, `web_search`)
-- Semantic memory search (`memory_search` — requires embeddings provider)
+- Shell commands beyond `ls` (exec allowlisted to `ls` only)
+- Browser automation (`browser`)
 - Process management (`process`)
 - Node/device control (`nodes`)
-- Subagent spawning (`sessions_spawn`)
+- Sub-agent spawning (`sessions_spawn`)
 - Gateway access (`gateway`)
 
 **Config:**
+
 **openclaw.json:**
 ```json5
 {
   tools: {
-    allow: ["read", "write", "edit", "memory_get", "exec"],
-    deny: ["process", "browser", "nodes", "web_search", "web_fetch", "gateway", "memory_search", "agents_list", "sessions_spawn"],
+    allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec", "image", "cron", "apply_patch"],
+    deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"],
     exec: {
       host: "gateway",
       security: "allowlist",
@@ -69,98 +87,41 @@ Each tier is earned by hitting the ceiling naturally — not upsold. When you fi
 
 ---
 
-## Tier 1: Research Assistant
+## Tier 1: Capable Agent
 
-Enable web search, fetching, and semantic memory search.
-
-**Additional capabilities:**
-- Search the web
-- Fetch and read web pages
-- Semantic memory search (requires an embeddings-capable provider like OpenAI or Gemini)
-
-**What this looks like in practice:**
-- "What's the latest on X?" — agent searches the web and summarizes findings
-- "Fact-check this claim" — agent looks up sources and reports back
-- "Research competitors in this space" — agent compiles a report from multiple sources
-- "What does this API do?" — agent reads the documentation for you
-
-**When to upgrade from Tier 0:** You find yourself saying "can you look this up?" or pasting URLs and asking the agent to read them. If you're copy-pasting information into the chat for the agent to process, Tier 1 lets it fetch that information itself.
-
-**How to enable:**
-
-SSH in and edit the config:
-```bash
-railway ssh
-nano /data/.openclaw/openclaw.json
-```
-
-Remove `web_search`, `web_fetch`, and `memory_search` from the deny list:
-```json5
-{
-  agents: {
-    defaults: {
-      tools: {
-        allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch"],
-        deny: ["exec", "process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"]
-      }
-    }
-  }
-}
-```
-
-**Note:** `memory_search` uses semantic search powered by embeddings. OpenClaw auto-selects an embeddings provider from your configured API keys (OpenAI, Gemini, Voyage). If your provider doesn't support embeddings (e.g., Groq, OpenRouter), memory search falls back to keyword matching only.
-
-Restart the gateway:
-```bash
-pkill -f "openclaw gateway"
-openclaw gateway run --port 18789 &
-```
-
----
-
-## Tier 2: Developer Tools
-
-Enable restricted shell access for development tasks.
+Everything in Tier 0, plus curated shell commands with user approval.
 
 **Additional capabilities:**
-- Run whitelisted shell commands (cat, grep, find, git, etc. — `ls` is already available at Tier 0)
-- Work with code repositories
-- Persistent model changes via `openclaw models set` (no redeploy needed)
-- OAuth provider setup (Google AI, etc.)
+- Run curated shell commands: `cat`, `head`, `tail`, `grep`, `find`, `wc`, `sort`, `uniq`, `git`
+- Agent asks for approval on first use of each new command (`ask: on-miss`)
 
 **What this looks like in practice:**
 - "Clone this repo and explain the architecture" — agent runs git, reads code, maps the structure
 - "Find all TODO comments in this project" — agent greps through files
-- "Set up the DeepSeek model permanently" — agent runs `openclaw models set deepseek/model-name`
 - "Show me the last 20 lines of this log" — agent runs tail on the file
+- "How many lines of code are in this project?" — agent uses wc and find
 
-**When to upgrade from Tier 1:** You're working on code or technical projects and keep wishing the agent could just run a command instead of telling you what to run. If you find yourself being the agent's hands, Tier 2 gives it (limited) hands of its own.
+**When to upgrade from Tier 0:** You're working on code or technical projects and keep wishing the agent could just read files or run basic commands instead of telling you what to run.
 
 **How to enable:**
-
-Update **openclaw.json** — add web tools, keep exec in allowlist mode with approval prompts:
-```json5
-{
-  tools: {
-    allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec"],
-    deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"],
-    exec: {
-      host: "gateway",
-      security: "allowlist",
-      ask: "always"
-    }
-  }
-}
+```
+SECURITY_TIER=1
 ```
 
-Update **exec-approvals.json** (`~/.openclaw/exec-approvals.json`) — expand the allowlist:
+Redeploy. That's it.
+
+**What changes:**
+- Exec allowlist expands from `ls` only to the curated list above
+- `ask: on-miss` means the agent prompts for approval the first time it runs each command, then remembers
+
+**exec-approvals.json** (deployed automatically):
 ```json5
 {
   version: 1,
   agents: {
     main: {
       security: "allowlist",
-      ask: "always",
+      ask: "on-miss",
       askFallback: "deny",
       allowlist: [
         { pattern: "/usr/bin/ls" },
@@ -180,65 +141,84 @@ Update **exec-approvals.json** (`~/.openclaw/exec-approvals.json`) — expand th
 }
 ```
 
-**Important:** The allowlist uses resolved binary paths (glob patterns). Commands not in the list will be blocked. Chaining (`;`, `&&`, `||`) and redirections are blocked in allowlist mode.
+**Important:** The allowlist uses resolved binary paths. Commands not in the list are blocked. Chaining (`;`, `&&`, `||`) and redirections are blocked in allowlist mode.
 
 ---
 
-## Tier 3: Automation
+## Tier 2: Power User
 
-Enable skills, cron jobs, and more advanced features.
+Everything in Tier 1, plus unrestricted shell, browser, sub-agents, and process management.
 
 **Additional capabilities:**
-- Run skills from ClawHub
-- Schedule cron jobs
-- Spawn subagents for parallel work
+- Full shell access (any command, with `ask: on-miss` approval)
+- Browser automation (remote only — no local Chromium)
+- Sub-agent spawning for parallel work
+- Process management
+- `curl`, `node`, and any other installed binary
 
 **What this looks like in practice:**
-- "Every morning, check my project board and summarize what's due" — agent runs a scheduled task
-- "Research these three topics at the same time" — agent spawns subagents for parallel work
-- "Set up a daily standup summary" — agent creates a cron job that runs automatically
+- "Set up this project" — agent clones, installs dependencies, configures
+- "Research these three topics in parallel" — agent spawns sub-agents
+- "Every morning, check my project board and summarize" — agent creates a cron with sub-agent
+- "Browse this documentation site and compile a guide" — agent uses remote browser
 
-**When to upgrade from Tier 2:** You're comfortable with what the agent does and want it to work independently — on a schedule, in parallel, or without being prompted. This is where the agent goes from reactive to proactive.
+**When to upgrade from Tier 1:** You're comfortable with what the agent does and want it to work independently — running arbitrary commands, using a browser, or doing parallel work.
 
 **How to enable:**
-
-Update the config:
-```json5
-{
-  agents: {
-    defaults: {
-      tools: {
-        allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec", "sessions_spawn"],
-        deny: ["process", "browser", "nodes", "gateway", "agents_list"]
-      },
-      subagents: {
-        model: "provider/cheap-model",  // Use a cheaper model for subagents
-        maxConcurrent: 2
-      }
-    }
-  }
-}
 ```
+SECURITY_TIER=2
+```
+
+Redeploy.
+
+**What changes:**
+- `process`, `browser`, `sessions_spawn`, `agents_list` moved from deny to allow
+- Exec switches from allowlist to full mode
+- No exec-approvals file deployed (not needed in full mode)
+- `ask: on-miss` still requires approval for new commands
+
+**Browser automation:**
+
+At Tier 2, browser automation uses a remote browser service — no local Chromium is installed in the container. To enable browser tools, you'll need a cloud browser provider. Options include:
+
+- **Browserbase** — `BROWSERBASE_API_KEY` + `BROWSERBASE_PROJECT_ID`
+- **Steel** — `STEEL_API_KEY`
+- Other remote browser services that provide a WebSocket endpoint
+
+Set the appropriate env vars and the agent will connect to the remote browser automatically.
+
+**Risks to understand:**
+- The agent can run any command in the container
+- Sub-agents inherit the parent's permissions — if the parent has full exec, so do sub-agents
+- Browser automation can interact with web pages (potential prompt injection surface)
+- `ask: on-miss` only prompts the first time; after approval, that command runs freely
 
 ---
 
-## Tier 4: Full Trust
+## Tier 3: Operator
 
-Remove all restrictions. Only do this if you fully understand the risks.
+Everything in Tier 2, plus elevated permissions, node control, and gateway access. **Requires SSH.**
 
-**What's unlocked:**
-- Everything — no tool restrictions, no command allowlists
+**Additional capabilities:**
+- Elevated tool permissions
+- Node/device control
+- Gateway configuration access
+- Everything — no tool restrictions
 
-**When to consider this:** You're running in a fully isolated environment, you understand prompt injection risks, and you need the agent to have unrestricted access. This is for advanced users who are effectively treating the agent as a full system operator.
-
-**Risks:**
-- Agent can run any command
-- Agent can access browser sessions
-- Agent can spawn unlimited subagents
-- Agent can modify gateway configuration
-- If compromised via prompt injection, attacker has full access
+**When to consider this:** You're running in a fully isolated environment, you understand prompt injection risks, and you need the agent to have unrestricted access. This is for advanced users who are treating the agent as a full system operator.
 
 **How to enable:**
+
+Setting `SECURITY_TIER=3` via env var applies Tier 2 and writes a `.tier-status` marker to the workspace. The agent reads this and guides you through the SSH steps.
+
+To complete Tier 3 setup, SSH in:
+
+```bash
+railway ssh
+nano /data/.openclaw/openclaw.json
+```
+
+Set an empty deny list and enable elevated mode:
 
 ```json5
 {
@@ -252,7 +232,7 @@ Remove all restrictions. Only do this if you fully understand the risks.
   tools: {
     exec: {
       security: "full",
-      ask: "on-miss"  // Only ask for new commands
+      ask: "on-miss"
     },
     elevated: {
       enabled: true
@@ -261,25 +241,38 @@ Remove all restrictions. Only do this if you fully understand the risks.
 }
 ```
 
+Restart the gateway:
+```bash
+pkill -f "openclaw gateway"
+openclaw gateway run --port 18789 &
+exit
+```
+
+**Risks:**
+- Agent can run any command, access browser sessions, spawn unlimited sub-agents
+- Agent can modify gateway configuration
+- If compromised via prompt injection, attacker has full container access
+- API spending has no automatic cap — verify your provider has limits set
+
 ---
 
 ## Per-Channel Overrides
 
-You can set different tiers for different channels. For example, Telegram gets Tier 2 but Discord stays at Tier 0:
+You can set different capabilities for different channels. For example, Telegram gets Tier 2 capabilities but Discord stays at defaults:
 
 ```json5
 {
   agents: {
     defaults: {
       tools: {
-        deny: ["exec", "browser", "process", "nodes", "web_search", "web_fetch"]
+        deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"]
       }
     }
   },
   channels: {
     telegram: {
       tools: {
-        allow: ["exec", "web_search", "web_fetch"]
+        allow: ["process", "browser", "sessions_spawn"]
       }
     }
   }
@@ -310,14 +303,13 @@ You can give specific users elevated access:
 
 ## Checking Current Config
 
-SSH in and view the current configuration:
+Ask your bot: "What tools do you have access to?" or "What tier am I on?"
 
+Or SSH in and view directly:
 ```bash
 railway ssh
 cat /data/.openclaw/openclaw.json
 ```
-
-Or ask your bot: "What tools do you have access to?"
 
 ---
 
@@ -325,31 +317,23 @@ Or ask your bot: "What tools do you have access to?"
 
 Things go wrong. Here's how to fix them.
 
-### "I deleted something in my workspace"
+### "I changed SECURITY_TIER and something broke"
 
-Your workspace lives on the volume at `/data/workspace`. If you delete files, they're gone — but redeploying the container will restore any template files (like BOOTSTRAP.md) that are missing. Your agent's memory and identity files are only at risk if you manually delete them.
+Set `SECURITY_TIER=0` (or remove it entirely) and redeploy. Config regenerates to safe defaults.
 
-### "I changed the config and now things are broken"
+### "I did SSH config edits and now things are broken"
 
-Redeploy the container. The entrypoint regenerates `openclaw.json` from your environment variables on every startup. Whatever you changed gets replaced with a known-good config.
+Redeploy the container. The entrypoint regenerates `openclaw.json` from your environment variables on every startup. Whatever you changed via SSH gets replaced.
 
-```bash
-# Or manually from SSH:
-rm /data/.openclaw/openclaw.json
-# Then redeploy from Railway dashboard
-```
+### "I enabled Tier 3 and want to go back"
 
-### "I enabled Tier 4 and want to go back"
-
-Redeploy. Config regenerates at Tier 0 defaults from env vars. If you want a different tier, re-apply just that tier's config changes.
+Set `SECURITY_TIER=0` and redeploy. Config regenerates at Tier 0 defaults.
 
 ### "The agent is doing something I didn't expect"
 
-At Tier 0-1, the agent can't execute commands or access the network (Tier 0) / can only read the web (Tier 1). The blast radius is limited to file changes in the workspace. If you're concerned:
-
 1. Check what tools are active: ask the agent "What tools do you have access to?"
 2. Review workspace changes via SSH: `ls -la /data/workspace/`
-3. Redeploy to reset config to defaults
+3. Lower the tier or redeploy to reset
 
 ### "I want to start completely fresh"
 
@@ -359,21 +343,23 @@ Delete the volume in Railway dashboard and redeploy. This wipes everything — c
 
 ## Safety Guardrails
 
-When running at higher tiers, keep these in mind:
-
-**Tier 1 (web access):**
+**Tier 0 (web access):**
 - The agent can read any public web page. It cannot log into services or access private content.
 - Be cautious about asking it to visit URLs from untrusted sources — web content can contain prompt injection attempts.
+- The worst case is a confused or misleading response. The agent can't take real-world action based on a malicious page.
 
-**Tier 2 (shell access):**
-- The allowlist restricts which commands the agent can run. Review it before enabling.
-- `ask: "always"` means the agent must get approval before every command. Only change this if you trust the agent fully.
-- Never add `rm`, `curl`, `wget`, or package managers to the allowlist unless you understand the implications.
+**Tier 1 (curated shell):**
+- The allowlist restricts which commands the agent can run. Only read-only tools are included.
+- `ask: on-miss` means the agent prompts for approval before running a new command type.
+- Chaining (`;`, `&&`, `||`) and redirections are blocked.
 
-**Tier 3 (automation):**
-- Subagents inherit the parent's tool permissions. If the parent has shell access, so do subagents.
-- Cron jobs run unattended. Start with low-risk tasks and review their output before adding more.
+**Tier 2 (full shell + browser):**
+- The agent can run any command in the container. `ask: on-miss` still requires first-time approval.
+- Sub-agents inherit permissions. If the parent has full exec, so do sub-agents.
+- Browser automation can interact with web pages — be mindful of prompt injection.
+- Never add secrets to workspace files the agent can read.
 
-**Tier 4 (full trust):**
-- Prompt injection is your main risk. Any content the agent reads (web pages, files, messages from other users) could contain instructions that the agent follows.
-- Consider whether you actually need Tier 4, or if Tier 2/3 with a broader allowlist would suffice.
+**Tier 3 (operator):**
+- Prompt injection is your main risk. Any content the agent reads could contain instructions it follows.
+- Consider whether Tier 2 with targeted additions would suffice before going full operator.
+- Verify your LLM provider has spending caps configured.

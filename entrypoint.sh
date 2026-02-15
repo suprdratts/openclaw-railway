@@ -39,19 +39,40 @@ if [ -d "/app/docs" ] && [ ! -d "/data/workspace/docs" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Deploy exec-approvals (allowlist for Tier 0 — ls only)
+# 3. Deploy exec-approvals (tier-aware)
+#    Tier 0: ls only, ask off
+#    Tier 1: curated list (cat, grep, git, etc.), ask on-miss
+#    Tier 2+: full exec, no allowlist needed
 #    Note: exec-approvals.json lives at ~/.openclaw/ (user home), NOT $OPENCLAW_STATE_DIR
 # -----------------------------------------------------------------------------
-APPROVALS_SRC="/app/config/exec-approvals.json"
+SECURITY_TIER="${SECURITY_TIER:-0}"
 APPROVALS_HOME="/home/openclaw/.openclaw/exec-approvals.json"
 
-if [ -f "$APPROVALS_SRC" ]; then
-  echo "[entrypoint] Deploying exec-approvals..."
-  mkdir -p /home/openclaw/.openclaw
+mkdir -p /home/openclaw/.openclaw
+
+case "$SECURITY_TIER" in
+  0)
+    APPROVALS_SRC="/app/config/exec-approvals-tier0.json"
+    echo "[entrypoint] Deploying exec-approvals for Tier 0 (ls only)..."
+    ;;
+  1)
+    APPROVALS_SRC="/app/config/exec-approvals-tier1.json"
+    echo "[entrypoint] Deploying exec-approvals for Tier 1 (curated list)..."
+    ;;
+  *)
+    APPROVALS_SRC=""
+    echo "[entrypoint] Tier ${SECURITY_TIER}: full exec mode, no exec-approvals needed"
+    # Remove stale approvals file if upgrading from a lower tier
+    rm -f "$APPROVALS_HOME"
+    ;;
+esac
+
+if [ -n "$APPROVALS_SRC" ] && [ -f "$APPROVALS_SRC" ]; then
   cp "$APPROVALS_SRC" "$APPROVALS_HOME"
   chmod 600 "$APPROVALS_HOME"
-  chown -R openclaw:openclaw /home/openclaw/.openclaw
 fi
+
+chown -R openclaw:openclaw /home/openclaw/.openclaw
 
 # -----------------------------------------------------------------------------
 # 4. Build config from environment variables (always regenerate)

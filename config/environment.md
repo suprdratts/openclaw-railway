@@ -144,6 +144,43 @@ If voice messages aren't being transcribed, your provider likely doesn't support
 | `GATEWAY_TOKEN` | Authentication token for gateway | Auto-generated |
 | `GATEWAY_PORT` | Port for gateway (internal) | `18789` |
 
+## Security Tier
+
+Control your agent's capabilities via environment variable. No SSH needed for Tiers 0-2.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SECURITY_TIER` | Security tier level: `0`, `1`, `2`, or `3` | `0` |
+
+| Tier | Name | What It Adds |
+|------|------|-------------|
+| 0 | Personal Assistant | Web search/fetch, memory, read/write, ls, cron, image |
+| 1 | Capable Agent | + curated exec (cat, grep, git, find, head, tail, wc, sort, uniq) |
+| 2 | Power User | + full exec, browser (remote), sub-agents, process management |
+| 3 | Operator | SSH only. Applies Tier 2 via env var, guides you to SSH for the rest |
+
+Setting `SECURITY_TIER=3` via env var applies Tier 2 and writes a marker file so the agent can guide you through the SSH steps for the remaining Tier 3 config.
+
+See [TIERS.md](../docs/TIERS.md) for full details on each tier.
+
+## Embeddings / Semantic Memory
+
+Semantic memory search (`memory_search`) requires an embeddings provider. The template auto-configures this when possible.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_EMBEDDING_MODEL` | Override the default embedding model | `openai/text-embedding-3-small` |
+
+**Auto-configuration logic:**
+- If `OPENAI_API_KEY` or `GOOGLE_AI_API_KEY` is set → embeddings auto-detected natively (no config needed)
+- If only `OPENROUTER_API_KEY` is set → embeddings routed through OpenRouter using `openai/text-embedding-3-small` (or your `LLM_EMBEDDING_MODEL` override)
+- If no embeddings-capable provider → falls back to BM25 keyword matching (still works, just less precise)
+
+**To use a specific embedding model through OpenRouter:**
+```
+LLM_EMBEDDING_MODEL=openai/text-embedding-3-large
+```
+
 ## Optional
 
 | Variable | Description |
@@ -164,12 +201,23 @@ TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_OWNER_ID=987654321
 ```
 
-### With Voice Support (OpenRouter + Groq for transcription)
+### With Curated Shell Access (Tier 1)
+
+```
+OPENROUTER_API_KEY=sk-or-...
+LLM_PRIMARY_MODEL=openrouter/minimax/MiniMax-M2.5
+SECURITY_TIER=1
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_OWNER_ID=987654321
+```
+
+### Full Power (Tier 2 + Voice)
 
 ```
 OPENROUTER_API_KEY=sk-or-...
 GROQ_API_KEY=gsk_...
-LLM_PRIMARY_MODEL=openrouter/minimax/MiniMax-M2.5
+LLM_PRIMARY_MODEL=openrouter/anthropic/claude-sonnet-4
+SECURITY_TIER=2
 TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_OWNER_ID=987654321
 ```

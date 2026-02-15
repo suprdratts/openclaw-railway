@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 
 const CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || '/data/.openclaw/openclaw.json';
 const DEFAULTS_PATH = '/app/config/defaults.json';
+const WORKSPACE_DIR = process.env.WORKSPACE_DIR || '/data/workspace';
 
 // LLM Provider API Keys - OpenClaw reads these directly from env
 // Listed here so Railway detects them in the UI
@@ -43,6 +44,125 @@ const LLM_PROVIDERS = [
   'AWS_REGION',
 ];
 
+// Embeddings-capable provider keys (these providers support embeddings natively)
+const EMBEDDINGS_NATIVE_KEYS = ['OPENAI_API_KEY', 'GOOGLE_AI_API_KEY'];
+
+const TIER_NAMES = {
+  0: 'Personal Assistant',
+  1: 'Capable Agent',
+  2: 'Power User',
+  3: 'Operator',
+};
+
+/**
+ * Apply security tier overrides to the config.
+ * Tier 0 uses defaults.json as-is.
+ * Higher tiers progressively unlock more capabilities.
+ */
+function applySecurityTier(config, tier) {
+  config.tools = config.tools || {};
+
+  if (tier === 0) {
+    // Tier 0: defaults.json as-is — web + memory_search included, ls-only exec
+    config.tools.exec = config.tools.exec || {};
+    config.tools.exec.host = 'gateway';
+    config.tools.exec.security = 'allowlist';
+    config.tools.exec.ask = 'off';
+    return;
+  }
+
+  if (tier === 1) {
+    // Tier 1: same allow/deny as Tier 0, curated exec with ask: on-miss
+    config.tools.exec = config.tools.exec || {};
+    config.tools.exec.host = 'gateway';
+    config.tools.exec.security = 'allowlist';
+    config.tools.exec.ask = 'on-miss';
+    return;
+  }
+
+  if (tier >= 2) {
+    // Tier 2+: unlock process, browser, sessions_spawn, agents_list
+    config.tools.allow = [
+      'read', 'write', 'edit', 'memory_get', 'memory_search',
+      'web_search', 'web_fetch', 'exec', 'image', 'cron', 'apply_patch',
+      'process', 'browser', 'sessions_spawn', 'agents_list',
+    ];
+    config.tools.deny = ['nodes', 'gateway'];
+
+    config.tools.exec = config.tools.exec || {};
+    config.tools.exec.host = 'gateway';
+    config.tools.exec.security = 'full';
+    config.tools.exec.ask = 'on-miss';
+    return;
+  }
+}
+
+/**
+ * Auto-configure embeddings for memory_search.
+ * If OpenRouter is the only provider, route embeddings through it.
+ * If a native embeddings provider exists, let OpenClaw auto-detect.
+ */
+function configureEmbeddings(config) {
+  const hasNativeEmbeddings = EMBEDDINGS_NATIVE_KEYS.some(k => process.env[k]);
+
+  if (hasNativeEmbeddings) {
+    console.log('[build-config] Embeddings: native provider detected, using auto-detection');
+    return;
+  }
+
+  if (process.env.OPENROUTER_API_KEY) {
+    const model = process.env.LLM_EMBEDDING_MODEL || 'openai/text-embedding-3-small';
+    config.agents = config.agents || {};
+    config.agents.defaults = config.agents.defaults || {};
+    config.agents.defaults.memorySearch = {
+      provider: 'openai',
+      model: model,
+      remote: {
+        baseUrl: 'https://openrouter.ai/api/v1',
+      },
+    };
+    console.log(`[build-config] Embeddings: configured via OpenRouter (model: ${model})`);
+    return;
+  }
+
+  console.log('[build-config] Embeddings: no embeddings-capable provider detected');
+  console.log('[build-config] memory_search will use BM25 keyword fallback');
+}
+
+/**
+ * Write a workspace marker when SECURITY_TIER=3 is set via env var
+ * but capped at Tier 2. The agent reads this and guides the user to SSH.
+ */
+function writeTier3Marker() {
+  const markerPath = path.join(WORKSPACE_DIR, '.tier-status');
+  const content = `# Tier Status
+
+SECURITY_TIER=3 was set via environment variable, but Tier 3 (Operator) requires SSH access to configure.
+
+Tier 2 (Power User) has been applied instead. This gives you:
+- Full shell access, browser automation, sub-agents, process management
+- Everything except gateway config, node control, and elevated permissions
+
+To complete the Tier 3 upgrade, SSH into your Railway container:
+\`\`\`
+railway ssh
+\`\`\`
+
+Then follow the Tier 3 setup in docs/TIERS.md — the main additions are:
+- Enabling elevated tool permissions
+- Configuring node access if needed
+- Gateway management access
+
+Your user requested Tier 3. Guide them through the SSH steps when they're ready.
+`;
+  try {
+    fs.writeFileSync(markerPath, content, { mode: 0o644 });
+    console.log('[build-config] Wrote .tier-status marker (Tier 3 requested, Tier 2 applied)');
+  } catch (err) {
+    console.log('[build-config] WARNING: Could not write .tier-status:', err.message);
+  }
+}
+
 function buildConfig() {
   // Start with defaults if they exist
   let config = {};
@@ -56,6 +176,30 @@ function buildConfig() {
   config.agents.defaults = config.agents.defaults || {};
   config.channels = config.channels || {};
   config.gateway = config.gateway || {};
+
+  // --- Security Tier ---
+  const rawTier = parseInt(process.env.SECURITY_TIER || '0', 10);
+  const tier = Math.max(0, Math.min(3, isNaN(rawTier) ? 0 : rawTier));
+  const effectiveTier = tier === 3 ? 2 : tier;
+
+  console.log(`[build-config] SECURITY_TIER=${tier} (${TIER_NAMES[tier] || 'Unknown'})`);
+
+  if (tier === 3) {
+    console.log('[build-config] WARNING: SECURITY_TIER=3 (Operator) requires SSH to configure');
+    console.log('[build-config] Applying Tier 2 (Power User) via env var');
+    console.log('[build-config] A .tier-status file will be written to the workspace');
+    writeTier3Marker();
+  }
+
+  applySecurityTier(config, effectiveTier);
+
+  console.log(`[build-config] Effective tier: ${effectiveTier} (${TIER_NAMES[effectiveTier]})`);
+  console.log(`[build-config] Tools allowed: ${config.tools?.allow?.join(', ') || 'defaults'}`);
+  console.log(`[build-config] Tools denied: ${config.tools?.deny?.join(', ') || 'none'}`);
+  console.log(`[build-config] Exec security: ${config.tools?.exec?.security || 'not set'}, ask: ${config.tools?.exec?.ask || 'not set'}`);
+
+  // --- Embeddings ---
+  configureEmbeddings(config);
 
   // --- LLM Model (required - user must specify) ---
   if (process.env.LLM_PRIMARY_MODEL) {
