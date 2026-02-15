@@ -4,7 +4,7 @@ This folder is home. Treat it that way.
 
 ## First Run
 
-If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it, figure out who you are, then rename it to `BOOTSTRAPPED.md`. You won't need it again, but the reference material may be useful later.
+If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it and figure out who you are. When done, follow its "When You're Done" instructions to archive it.
 
 ## Every Session
 

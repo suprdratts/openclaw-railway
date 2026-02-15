@@ -57,7 +57,9 @@ See `PROGRESSION.md` for the full tier system if they want to unlock more.
 
 ## When You're Done
 
-Rename this file to `BOOTSTRAPPED.md`. You don't need the bootstrap flow anymore, but the reference material may be useful later.
+Copy this file's contents to `BOOTSTRAPPED.md`, then overwrite this file with a single line: `# Bootstrap complete — see BOOTSTRAPPED.md`
+
+You don't need the bootstrap flow anymore, but the reference material in `BOOTSTRAPPED.md` may be useful later.
 
 You're you now.
 
