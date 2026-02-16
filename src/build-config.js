@@ -292,9 +292,12 @@ function buildConfig() {
   config.gateway.mode = 'local';
 
   // --- Agent Identity ---
+  // OpenClaw moved identity under agents.list[] (top-level identity is legacy)
   if (process.env.AGENT_NAME) {
-    config.identity = config.identity || {};
-    config.identity.name = process.env.AGENT_NAME;
+    config.agents.list = config.agents.list || [{ id: 'main' }];
+    const mainAgent = config.agents.list.find(a => a.id === 'main') || config.agents.list[0];
+    mainAgent.identity = mainAgent.identity || {};
+    mainAgent.identity.name = process.env.AGENT_NAME;
   }
 
   return config;
