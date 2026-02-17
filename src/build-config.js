@@ -119,6 +119,7 @@ function configureEmbeddings(config) {
       model: model,
       remote: {
         baseUrl: 'https://openrouter.ai/api/v1',
+        apiKey: process.env.OPENROUTER_API_KEY,
       },
     };
     console.log(`[build-config] Embeddings: configured via OpenRouter (model: ${model})`);
