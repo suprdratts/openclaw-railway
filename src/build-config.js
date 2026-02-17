@@ -7,7 +7,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 
 const CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || '/data/.openclaw/openclaw.json';
 const DEFAULTS_PATH = '/app/config/defaults.json';
@@ -284,13 +283,9 @@ function buildConfig() {
   config.gateway.bind = 'loopback';
   config.gateway.auth = config.gateway.auth || {};
 
-  // Generate a random token if none provided (required for token auth mode)
   config.gateway.auth.mode = 'token';
   if (process.env.GATEWAY_TOKEN) {
     config.gateway.auth.token = '${GATEWAY_TOKEN}';
-  } else {
-    // No env var to interpolate — generate a random token inline
-    config.gateway.auth.token = crypto.randomUUID();
   }
 
   // Required for headless start

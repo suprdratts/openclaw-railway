@@ -147,7 +147,7 @@ fi
 #     Gateway reads provider keys at runtime (must stay), but these were only
 #     needed by build-config.js and can be safely removed.
 # -----------------------------------------------------------------------------
-unset GATEWAY_TOKEN 2>/dev/null || true
+# GATEWAY_TOKEN stays — gateway needs it for ${GATEWAY_TOKEN} interpolation
 unset SETUP_PASSWORD 2>/dev/null || true
 unset SECURITY_TIER 2>/dev/null || true
 echo "[entrypoint] Scrubbed consumed env vars"
