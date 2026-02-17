@@ -29,6 +29,9 @@
       "host": "gateway",
       "security": "allowlist",
       "ask": "off"
+    },
+    "fs": {
+      "workspaceOnly": true
     }
   },
   "session": {
