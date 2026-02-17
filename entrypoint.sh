@@ -47,16 +47,100 @@ fi
 #     means the agent can read its instructions but can't rewrite them.
 #     Always overwrite from templates to undo any prior tampering.
 # -----------------------------------------------------------------------------
+SECURITY_TIER="${SECURITY_TIER:-0}"
+
+# Determine tier metadata for injection
+case "$SECURITY_TIER" in
+  0)
+    TIER_NAME="Personal Assistant"
+    TIER_EXEC_COMMANDS="ls"
+    TIER_INJECT_BLOCK="You are running at **Tier 0 — Personal Assistant** (default).
+
+**Your tools:** read, write, edit, exec (ls only), memory_get, memory_search, web_fetch, cron
+**Exec commands:** \`ls\` only. All other shell commands are blocked by the gateway.
+**Blocked tools:** browser, process, sessions_spawn, agents_list, nodes, gateway
+**File reading:** Use the \`read\` tool. It's sandboxed to your workspace (\`/data/workspace/\`).
+
+This is a capable starting point. You're a thinking partner with file access, web fetching, and persistent memory. When your human hits a ceiling and needs more, see \`PROGRESSION.md\` for how to guide them through upgrades. Never suggest upgrades unprompted — wait until they need something you can't do."
+    ;;
+  1)
+    TIER_NAME="Capable Agent"
+    TIER_EXEC_COMMANDS="ls, grep, find, wc, sort, uniq, git"
+    TIER_INJECT_BLOCK="You are running at **Tier 1 — Capable Agent**.
+
+**Your tools:** read, write, edit, exec (curated list), memory_get, memory_search, web_fetch, cron
+**Exec commands:** \`ls\`, \`grep\`, \`find\`, \`wc\`, \`sort\`, \`uniq\`, \`git\`. File reading commands (cat, head, tail) are NOT available — use the \`read\` tool instead.
+**Blocked tools:** browser, process, sessions_spawn, agents_list, nodes, gateway
+**File reading:** Use the \`read\` tool. It supports \`offset\` and \`limit\` for partial reads. It's sandboxed to your workspace.
+**Note:** \`ask: on-miss\` — the first time you use each exec command, your user will be prompted for approval."
+    ;;
+  2)
+    TIER_NAME="Power User"
+    TIER_EXEC_COMMANDS="any"
+    TIER_INJECT_BLOCK="You are running at **Tier 2 — Power User**.
+
+**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_spawn, agents_list
+**Exec commands:** Any command. First use requires approval (\`ask: on-miss\`).
+**Blocked tools:** nodes, gateway"
+    ;;
+  3)
+    TIER_NAME="Operator"
+    TIER_EXEC_COMMANDS="any"
+    TIER_INJECT_BLOCK="You are running at **Tier 2 — Power User** (Tier 3 requested but requires SSH to complete).
+
+**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_spawn, agents_list
+**Exec commands:** Any command. First use requires approval (\`ask: on-miss\`).
+**Blocked tools:** nodes, gateway
+
+Check for a \`.tier-status\` file in the workspace — your user set SECURITY_TIER=3 but only Tier 2 was applied. Guide them through the SSH steps in \`PROGRESSION.md\` Section D."
+    ;;
+esac
+
+echo "[entrypoint] Tier ${SECURITY_TIER} (${TIER_NAME})"
+
+# Copy and lock protected templates
 PROTECTED_TEMPLATES="AGENTS.md TOOLS.md PROGRESSION.md PROJECTS.md"
 for fname in $PROTECTED_TEMPLATES; do
   src="/app/workspace-templates/$fname"
   dst="/data/workspace/$fname"
   if [ -f "$src" ]; then
     cp "$src" "$dst"
+  fi
+done
+
+# Inject tier-specific content into AGENTS.md before locking
+AGENTS_DST="/data/workspace/AGENTS.md"
+if [ -f "$AGENTS_DST" ]; then
+  TIER_INJECT_FILE=$(mktemp)
+  echo "$TIER_INJECT_BLOCK" > "$TIER_INJECT_FILE"
+  # Replace placeholder with tier content (awk -v can't handle multi-line, so read from file)
+  awk '
+    /<!-- TIER_INJECT -->/ { while ((getline line < "'"$TIER_INJECT_FILE"'") > 0) print line; next }
+    { print }
+  ' "$AGENTS_DST" > "${AGENTS_DST}.tmp"
+  mv "${AGENTS_DST}.tmp" "$AGENTS_DST"
+  rm -f "$TIER_INJECT_FILE"
+  echo "[entrypoint] Tier ${SECURITY_TIER} injected into AGENTS.md"
+fi
+
+# Write .tier marker file to workspace
+cat > /data/workspace/.tier <<TIEREOF
+SECURITY_TIER=${SECURITY_TIER}
+TIER_NAME=${TIER_NAME}
+EXEC_COMMANDS=${TIER_EXEC_COMMANDS}
+TIEREOF
+
+# Lock all protected templates + .tier (root:openclaw 440)
+for fname in $PROTECTED_TEMPLATES; do
+  dst="/data/workspace/$fname"
+  if [ -f "$dst" ]; then
     chown root:openclaw "$dst"
     chmod 440 "$dst"
   fi
 done
+chown root:openclaw /data/workspace/.tier
+chmod 440 /data/workspace/.tier
+
 # Docs directory: same treatment
 if [ -d "/app/docs" ]; then
   cp -r /app/docs /data/workspace/
@@ -68,11 +152,10 @@ echo "[entrypoint] Behavioral templates locked (root:openclaw 440)"
 # -----------------------------------------------------------------------------
 # 3. Deploy exec-approvals (tier-aware)
 #    Tier 0: ls only, ask off
-#    Tier 1: curated list (cat, grep, git, etc.), ask on-miss
+#    Tier 1: curated list (grep, find, git, wc, sort, uniq), ask on-miss
 #    Tier 2+: full exec, no allowlist needed
 #    Note: exec-approvals.json lives at ~/.openclaw/ (user home), NOT $OPENCLAW_STATE_DIR
 # -----------------------------------------------------------------------------
-SECURITY_TIER="${SECURITY_TIER:-0}"
 APPROVALS_HOME="/home/openclaw/.openclaw/exec-approvals.json"
 
 mkdir -p /home/openclaw/.openclaw
@@ -187,8 +270,8 @@ start_gateway() {
     # Config stays at 640 root:openclaw (set in step 4b).
     # Gateway re-reads config periodically for health snapshots, so the
     # openclaw group must retain read access. Write is blocked (root-owned).
-    # The exec allowlist (Tier 0: ls only) prevents cat-based reads.
-    # At Tier 1+ cat could read config — accepted read leak, not priv esc.
+    # Exec allowlist has no file-reading binaries (cat/head/tail removed).
+    # At Tier 2+ full exec could read config — accepted read leak, not priv esc.
     echo "[entrypoint] Config remains 640 root:openclaw (gateway needs periodic re-read)"
   else
     echo "[entrypoint] ERROR: Gateway exited immediately"

@@ -18,21 +18,6 @@
           "lastUsedCommand": "ls"
         },
         {
-          "id": "tier1-cat",
-          "pattern": "/usr/bin/cat",
-          "lastUsedCommand": "cat"
-        },
-        {
-          "id": "tier1-head",
-          "pattern": "/usr/bin/head",
-          "lastUsedCommand": "head"
-        },
-        {
-          "id": "tier1-tail",
-          "pattern": "/usr/bin/tail",
-          "lastUsedCommand": "tail"
-        },
-        {
           "id": "tier1-grep",
           "pattern": "/usr/bin/grep",
           "lastUsedCommand": "grep"

@@ -21,7 +21,7 @@ Your tier is set by the `SECURITY_TIER` env var. Detect your actual tier using t
 *Needs API key:*
 - `web_search` — Requires `BRAVE_API_KEY` env var
 
-**Tier 1 — Capable Agent** adds curated exec: `cat`, `head`, `tail`, `grep`, `find`, `wc`, `sort`, `uniq`, `git`
+**Tier 1 — Capable Agent** adds curated exec: `grep`, `find`, `wc`, `sort`, `uniq`, `git`. File reading uses the `read` tool (sandboxed to workspace).
 
 **Tier 2 — Power User** adds full exec, `browser`, `process`, `sessions_spawn`, `agents_list`
 

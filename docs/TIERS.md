@@ -96,7 +96,8 @@ Note: `memory_search` is auto-configured when using OpenRouter or OpenAI as your
 Everything in Tier 0, plus curated shell commands with user approval.
 
 **Additional capabilities:**
-- Run curated shell commands: `cat`, `head`, `tail`, `grep`, `find`, `wc`, `sort`, `uniq`, `git`
+- Run curated shell commands: `grep`, `find`, `wc`, `sort`, `uniq`, `git`
+- File reading handled by the `read` tool (sandboxed to workspace)
 - Agent asks for approval on first use of each new command (`ask: on-miss`)
 
 **What this looks like in practice:**
@@ -131,9 +132,6 @@ Redeploy. That's it.
       allowlist: [
         { pattern: "/usr/bin/ls" },
         { pattern: "/bin/ls" },
-        { pattern: "/usr/bin/cat" },
-        { pattern: "/usr/bin/head" },
-        { pattern: "/usr/bin/tail" },
         { pattern: "/usr/bin/grep" },
         { pattern: "/usr/bin/find" },
         { pattern: "/usr/bin/wc" },
@@ -356,7 +354,7 @@ Delete the volume in Railway dashboard and redeploy. This wipes everything — c
 - The worst case is a confused or misleading response. The agent can't take real-world action based on a malicious page.
 
 **Tier 1 (curated shell):**
-- The allowlist restricts which commands the agent can run. Only read-only tools are included.
+- The allowlist restricts which commands the agent can run. File-reading binaries (`cat`, `head`, `tail`) are excluded — the `read` tool handles file reading within the workspace sandbox.
 - `ask: on-miss` means the agent prompts for approval before running a new command type.
 - Chaining (`;`, `&&`, `||`) and redirections are blocked.
 
