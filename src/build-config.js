@@ -23,6 +23,8 @@ const LLM_PROVIDERS = [
   // Aggregators/Gateways
   'OPENROUTER_API_KEY',
   'VERCEL_GATEWAY_API_KEY',
+  // Generic fallback
+  'LLM_API_KEY',
   // Fast inference
   'GROQ_API_KEY',
   'TOGETHER_API_KEY',
@@ -216,6 +218,16 @@ function buildConfig() {
   if (process.env.LLM_FALLBACK_MODELS) {
     config.agents.defaults.model = config.agents.defaults.model || {};
     config.agents.defaults.model.fallbacks = process.env.LLM_FALLBACK_MODELS.split(',').map(s => s.trim());
+  }
+
+  if (process.env.LLM_HEARTBEAT_MODEL) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.model = process.env.LLM_HEARTBEAT_MODEL;
+  }
+
+  if (process.env.LLM_SUBAGENT_MODEL) {
+    config.agents.defaults.subagents = config.agents.defaults.subagents || {};
+    config.agents.defaults.subagents.model = process.env.LLM_SUBAGENT_MODEL;
   }
 
   // --- Telegram ---
