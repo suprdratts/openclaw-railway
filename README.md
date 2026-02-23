@@ -1,6 +1,10 @@
+<img src="https://openclaw.ai/favicon.svg" alt="OpenClaw" width="32" height="32" align="left" style="margin-right: 8px;">
+
 # OpenClaw Railway Template
 
 > Deploy a security-hardened AI assistant to Railway. Progressive trust, not blind trust.
+
+[OpenClaw](https://openclaw.ai) is an open-source AI assistant platform that connects to your chat apps and runs 24/7. This template deploys it to Railway with security hardening — configure entirely via environment variables, no SSH required.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/yBnBWA?referralCode=slayga&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
@@ -12,10 +16,30 @@
    - `LLM_PRIMARY_MODEL` — e.g. `openrouter/minimax/MiniMax-M2.5`
    - `TELEGRAM_BOT_TOKEN` — from [@BotFather](https://t.me/BotFather)
    - `TELEGRAM_OWNER_ID` — your user ID (from [@userinfobot](https://t.me/userinfobot))
-3. Add a volume mounted at `/data`
-4. Deploy — message your bot and start chatting
+3. Deploy — message your bot and start chatting
 
-Works with Telegram, Discord, and Slack. See [config/environment.md](config/environment.md) for all options.
+Persistent storage at `/data` is included automatically. Works with Telegram, Discord, and Slack. See [config/environment.md](config/environment.md) for all options.
+
+<details>
+<summary><strong>Getting your credentials</strong></summary>
+
+**OpenRouter API Key:**
+1. Sign up at [openrouter.ai](https://openrouter.ai)
+2. Go to [Keys](https://openrouter.ai/keys) and create a new key
+3. One key gives you access to all major models (OpenAI, Anthropic, Google, DeepSeek, etc.)
+
+**Telegram Bot Token:**
+1. Message [@BotFather](https://t.me/BotFather) on Telegram
+2. Send `/newbot` and follow the prompts to name your bot
+3. Copy the token it gives you
+
+**Your Telegram User ID:**
+1. Message [@userinfobot](https://t.me/userinfobot) on Telegram
+2. It replies with your numeric user ID
+
+Discord and Slack are also supported — see the [Setup Guide](docs/SETUP.md) for details.
+
+</details>
 
 ## What You Get
 
@@ -28,12 +52,14 @@ An AI assistant that runs 24/7 on your own infrastructure, connected to your cha
 - Scheduled reminders and cron jobs
 - Semantic memory search
 
+**Cost:** Railway's free trial works for testing. LLM API costs can be under $5/month with recommended models, but usage varies wildly depending on your model choice, message volume, and use case.
+
 **Unlock more with a single env var change:**
 
 | Tier | Name | What It Adds |
 |------|------|-------------|
 | 0 | Personal Assistant | Web, memory, read/write, cron *(default)* |
-| 1 | Capable Agent | + curated shell (grep, find, git, wc, sort, uniq) |
+| 1 | Capable Agent | + curated shell (find, git, wc, sort, uniq) |
 | 2 | Power User | + full shell, remote browser, sub-agents |
 | 3 | Operator | + unrestricted access (requires SSH) |
 
