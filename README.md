@@ -12,6 +12,8 @@
 
 ## Quick Start
 
+> **Important:** Fill in at least the 4 variables below **during the deploy flow** before clicking Deploy. Railway does not keep unfilled template variables in your service config — if you skip them, you'll need to add them manually later from the [environment variable reference](config/environment.md).
+
 1. Click **Deploy on Railway** above
 2. Set environment variables:
    - `OPENROUTER_API_KEY` — one key, all models ([get one](https://openrouter.ai/keys))

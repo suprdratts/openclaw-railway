@@ -80,7 +80,7 @@ Behavioral template files (`AGENTS.md`, `TOOLS.md`, `PROGRESSION.md`, `PROJECTS.
 
 ## What Each Blocked Tool Does
 
-These tools are blocked at Tier 0 (default). See [TIERS.md](TIERS.md) for what each tier unlocks.
+These tools are blocked at Tier 0 (default). See [TIERS.md](docs/TIERS.md) for what each tier unlocks.
 
 | Tool | Risk | Why It's Blocked |
 |------|------|------------------|
@@ -211,11 +211,11 @@ OpenClaw's extension ecosystem ([ClawHub](https://clawhub.ai/)) is gated by the 
 - Audit ClawHub skills before installation: `openclaw skill audit <skill-name>`
 - For external service integrations at Tier 0, use the HTTP API pattern — the agent calls endpoints with `web_fetch`, and the external service enforces its own access control
 
-See [TIERS.md](TIERS.md) for the full skills-by-tier breakdown.
+See [TIERS.md](docs/TIERS.md) for the full skills-by-tier breakdown.
 
 ## Unlocking More Capabilities
 
-See [TIERS.md](TIERS.md) for how to progressively enable more agent capabilities.
+See [TIERS.md](docs/TIERS.md) for how to progressively enable more agent capabilities.
 
 ## Security Audit
 
@@ -244,10 +244,10 @@ This checks for common misconfigurations.
 
 API keys and tokens should always be set as Railway environment variables, not in `openclaw.json`. Railway encrypts these at rest and injects them at runtime.
 
-See [config/environment.md](../config/environment.md) for the full list.
+See [config/environment.md](config/environment.md) for the full list.
 
 ## Further Reading
 
 - [OpenClaw Security Docs](https://docs.openclaw.ai/gateway/security)
 - [Tool Policy vs Sandbox vs Elevated](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated)
-- [Threat Model](THREAT-MODEL.md)
+- [Threat Model](docs/THREAT-MODEL.md)
