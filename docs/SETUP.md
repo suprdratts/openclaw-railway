@@ -6,7 +6,7 @@ This walkthrough takes you from no accounts to a working AI assistant in about 1
 
 | Thing | Why | Cost |
 |-------|-----|------|
-| Railway account | Hosts your bot 24/7 | $5/mo ([pricing](https://railway.com/pricing)) |
+| Railway account | Hosts your bot 24/7 | $5/mo ([pricing](https://railway.com/pricing?referralCode=slayga)) |
 | OpenRouter API key | Gives the bot access to AI models | Pay per use (~$1-5/mo for light use) |
 | Telegram bot | How you talk to it | Free |
 
@@ -16,9 +16,9 @@ This walkthrough takes you from no accounts to a working AI assistant in about 1
 
 ## Step 0: Create a Railway Account
 
-[Railway](https://railway.com) is a container hosting platform — it runs your bot in the cloud so it stays online 24/7.
+[Railway](https://railway.com?referralCode=slayga) is a container hosting platform — it runs your bot in the cloud so it stays online 24/7.
 
-1. Go to [railway.com](https://railway.com) and sign up (GitHub login or email)
+1. Go to [railway.com](https://railway.com?referralCode=slayga) and sign up (GitHub login or email)
 2. Subscribe to the **Hobby plan** ($5/mo)
    - The trial works for testing, but services pause after the free tier limits
    - The Hobby plan includes $5 of resource usage per month — this template typically uses less than that
