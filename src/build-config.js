@@ -338,7 +338,8 @@ function buildConfig() {
     config.tools = config.tools || {};
     config.tools.exec = config.tools.exec || {};
     config.tools.exec.safeBinTrustedDirs = ['/data/bin'];
-    console.log('[build-config] Custom binaries: /data/bin added to safeBinTrustedDirs');
+    config.tools.exec.pathPrepend = ['/data/bin'];
+    console.log('[build-config] Custom binaries: /data/bin added to safeBinTrustedDirs + pathPrepend');
   }
 
   // --- Extra Environment Keys ---
