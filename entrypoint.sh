@@ -313,7 +313,6 @@ esac
 
 if [ -n "$APPROVALS_SRC" ] && [ -f "$APPROVALS_SRC" ]; then
   cp "$APPROVALS_SRC" "$APPROVALS_HOME"
-  chmod 600 "$APPROVALS_HOME"
 fi
 
 # Append EXEC_EXTRA_COMMANDS to exec-approvals (for custom binaries on the volume)
@@ -338,7 +337,17 @@ if [ -n "$EXEC_EXTRA_COMMANDS" ] && [ -f "$APPROVALS_HOME" ]; then
   done
 fi
 
-chown -R openclaw:openclaw /home/openclaw/.openclaw
+# Harden exec-approvals permissions in one pass:
+#   File: root:openclaw 660 — root owns, gateway (openclaw group) can read+write
+#     (gateway updates lastUsedCommand metadata at runtime on each exec call)
+#   Dir:  root:openclaw 750 — openclaw can traverse, cannot create new files
+if [ -f "$APPROVALS_HOME" ]; then
+  chown root:openclaw "$APPROVALS_HOME"
+  chmod 660 "$APPROVALS_HOME"
+  chown root:openclaw "$(dirname "$APPROVALS_HOME")"
+  chmod 750 "$(dirname "$APPROVALS_HOME")"
+  echo "[entrypoint] Exec-approvals hardened (root:openclaw 660, dir 750)"
+fi
 
 # -----------------------------------------------------------------------------
 # 4. Build config from environment variables (always regenerate)
@@ -378,20 +387,10 @@ if [ -f "$CONFIG_FILE" ]; then
   echo "[entrypoint] Config set to 640 root:openclaw (read-only for gateway, no agent write)"
 fi
 
-# Exec-approvals: root owns it, but gateway needs read+write at runtime
-# (exec tool updates lastUsedCommand metadata on each call).
-# 660 = group rw, which means the agent's write tool could also modify it.
-# Accepted tradeoff: even if the agent rewrites exec-approvals to expand
-# the allowlist, the tool policy in openclaw.json (which IS locked) still
-# governs which tools are available. The directory is 750 so the agent
-# can't create new files.
-if [ -f "$APPROVALS_HOME" ]; then
-  chown root:openclaw "$APPROVALS_HOME"
-  chmod 660 "$APPROVALS_HOME"
-  chown root:openclaw "$(dirname "$APPROVALS_HOME")"
-  chmod 750 "$(dirname "$APPROVALS_HOME")"
-  echo "[entrypoint] Exec-approvals hardened (root:openclaw 660, dir 750)"
-fi
+# Note: exec-approvals permissions already set in step 3 (single pass).
+# Accepted tradeoff: 660 means the agent's write tool could modify exec-approvals
+# to expand the allowlist, but the tool policy in openclaw.json (which IS locked
+# at 640 root:openclaw) still governs which tools are available.
 
 # -----------------------------------------------------------------------------
 # 4c. Env var notes
