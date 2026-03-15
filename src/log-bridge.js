@@ -10,6 +10,13 @@
  *
  * Zero dependencies — uses only readline, https, and process.stdin.
  *
+ * Gateway output format (consoleStyle: "json", --verbose --compact):
+ *   {"time":"...","level":"info","subsystem":"gateway/ws",
+ *    "message":"→ event agent tool=call:read call=read:0 meta=/data/workspace/AGENTS.md agent=main ..."}
+ *
+ * The tool info is embedded in the `message` field as key=value pairs with
+ * chalk ANSI color codes. We strip ANSI, then extract tool= and meta= fields.
+ *
  * Usage:
  *   openclaw gateway run ... 2>&1 | node log-bridge.js [options]
  *
@@ -70,6 +77,15 @@ const TOOL_ICONS = {
   sessions_yield: '\u{1F504}',
   agents_list: '\u{1F4CB}',
 };
+
+// ---------------------------------------------------------------------------
+// ANSI escape code stripping
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*m/g;
+function stripAnsi(str) {
+  return str.replace(ANSI_RE, '');
+}
 
 // ---------------------------------------------------------------------------
 // Event batching
@@ -153,7 +169,30 @@ function sendDiscord(text) {
 
 // ---------------------------------------------------------------------------
 // Log line parsing — extract tool events from gateway JSON logs
+//
+// Gateway format with consoleStyle:"json" + --verbose --compact:
+//   {"time":"...","level":"info","subsystem":"gateway/ws",
+//    "message":"→ event agent tool=call:read call=read:0 meta=/path/to/file ..."}
+//
+// The `tool` field has format "phase:name" where phase is "call" or "result".
+// The `meta` field (if present) has a one-line summary from the gateway.
+// All values may be wrapped in chalk ANSI codes — strip before parsing.
 // ---------------------------------------------------------------------------
+
+// Extract key=value pairs from the ws-log message string.
+// Values can be bare words or quoted strings. Keys use chalk.dim() so
+// they'll have ANSI around them — we strip first.
+function extractKV(cleaned) {
+  const kv = {};
+  // Match key=value where value is either a non-space run or absent
+  const re = /(\w+)=(\S+)/g;
+  let m;
+  while ((m = re.exec(cleaned)) !== null) {
+    kv[m[1]] = m[2];
+  }
+  return kv;
+}
+
 function tryParseToolEvent(line) {
   // Only attempt JSON parse on lines that look like JSON objects
   if (!line.startsWith('{')) return null;
@@ -161,14 +200,26 @@ function tryParseToolEvent(line) {
   try {
     const obj = JSON.parse(line);
 
-    // Flexible detection: check multiple possible field names the gateway
-    // might use for tool call events. This will be validated on first deploy
-    // with observer enabled.
-    const toolName = obj.tool || obj.toolName || obj.toolCall?.name
-      || (obj.event === 'tool_call' ? obj.name : null)
-      || (obj.type === 'tool_call' ? obj.name : null);
+    // Must be a gateway/ws log line with an event message
+    if (obj.subsystem !== 'gateway/ws') return null;
+    const msg = obj.message;
+    if (typeof msg !== 'string') return null;
 
+    const cleaned = stripAnsi(msg);
+
+    // Must be an outbound event with tool info
+    // Format: "→ event agent tool=phase:name ..."
+    if (!cleaned.includes('tool=')) return null;
+
+    const kv = extractKV(cleaned);
+    const toolField = kv.tool; // e.g. "call:read" or "result:read"
+    if (!toolField) return null;
+
+    const [phase, toolName] = toolField.split(':');
     if (!toolName) return null;
+
+    // Only report tool calls, not results (to avoid duplicates)
+    if (phase !== 'call') return null;
 
     const icon = TOOL_ICONS[toolName] || '\u{1F527}';
 
@@ -176,61 +227,19 @@ function tryParseToolEvent(line) {
       return `${icon} ${toolName}`;
     }
 
-    // Extract a one-line summary of the tool input
-    const input = obj.input || obj.args || obj.toolCall?.input || obj.params || {};
-    const summary = formatToolSummary(toolName, input);
+    // The `meta` field contains the gateway's one-line summary
+    const meta = kv.meta || '';
 
     if (VERBOSITY === 'verbose') {
-      const duration = obj.duration || obj.durationMs;
-      const status = obj.status || obj.result?.status;
-      const extras = [
-        duration ? `${duration}ms` : '',
-        status ? `[${status}]` : '',
-      ].filter(Boolean).join(' ');
-      return `${icon} ${toolName}: ${summary}${extras ? ` (${extras})` : ''}`;
+      const callId = kv.call || '';
+      const extras = [callId].filter(Boolean).join(' ');
+      return `${icon} ${toolName}${meta ? ': ' + truncate(meta, 80) : ''}${extras ? ' (' + extras + ')' : ''}`;
     }
 
     // normal
-    return `${icon} ${toolName}: ${summary}`;
+    return `${icon} ${toolName}${meta ? ': ' + truncate(meta, 80) : ''}`;
   } catch {
     return null;
-  }
-}
-
-function formatToolSummary(tool, input) {
-  if (typeof input === 'string') {
-    return truncate(input, 80);
-  }
-
-  switch (tool) {
-    case 'read':
-      return input.path || input.file || '(file)';
-    case 'write':
-    case 'edit':
-      return input.path || input.file || '(file)';
-    case 'exec': {
-      const cmd = input.command || input.cmd || '';
-      return truncate(cmd, 100);
-    }
-    case 'web_fetch':
-      return truncate(input.url || '', 100);
-    case 'web_search':
-      return truncate(input.query || input.q || '', 80);
-    case 'memory_search':
-      return truncate(input.query || input.q || '', 80);
-    case 'memory_get':
-      return input.path || input.key || '';
-    case 'apply_patch':
-      return '(patch)';
-    default: {
-      // Generic: show first string-valued field
-      for (const [k, v] of Object.entries(input)) {
-        if (typeof v === 'string' && v.length > 0) {
-          return truncate(`${k}=${v}`, 80);
-        }
-      }
-      return '';
-    }
   }
 }
 

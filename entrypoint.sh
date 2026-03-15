@@ -447,6 +447,7 @@ start_gateway() {
       [ -n "${TOOL_OBSERVER_THREAD_ID:-}" ] && LOG_BRIDGE_ARGS="${LOG_BRIDGE_ARGS} --thread-id=${TOOL_OBSERVER_THREAD_ID}"
       [ -n "${TOOL_OBSERVER_VERBOSITY:-}" ] && LOG_BRIDGE_ARGS="${LOG_BRIDGE_ARGS} --verbosity=${TOOL_OBSERVER_VERBOSITY}"
       [ -n "${TOOL_OBSERVER_BATCH_MS:-}" ] && LOG_BRIDGE_ARGS="${LOG_BRIDGE_ARGS} --batch-ms=${TOOL_OBSERVER_BATCH_MS}"
+      GATEWAY_VERBOSE=1
       echo "[entrypoint] Tool Observer enabled (channel: ${OBSERVER_CHANNEL}, chat: ${OBSERVER_CHAT_ID})"
     else
       echo "[entrypoint] WARNING: TOOL_OBSERVER_ENABLED=true but missing channel credentials — observer disabled"
@@ -458,7 +459,7 @@ start_gateway() {
     PATH=/data/bin:/usr/local/bin:/usr/bin:/bin \
     OPENCLAW_STATE_DIR=/data/.openclaw \
     NODE_ENV=production \
-    su openclaw -c "cd /data/workspace && openclaw gateway run --port ${GATEWAY_PORT} --compact 2>&1" | node /app/src/log-bridge.js ${LOG_BRIDGE_ARGS} &
+    su openclaw -c "cd /data/workspace && openclaw gateway run --port ${GATEWAY_PORT} --compact${GATEWAY_VERBOSE:+ --verbose} 2>&1" | node /app/src/log-bridge.js ${LOG_BRIDGE_ARGS} &
   GATEWAY_PID=$!
 
   sleep 3
