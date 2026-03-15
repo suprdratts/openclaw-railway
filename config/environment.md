@@ -223,6 +223,7 @@ See what your agent is doing in real-time. When enabled, tool call events (read,
 | `AGENT_NAME` | Display name for your agent |
 | `WORKSPACE_DIR` | Workspace directory path |
 | `LLM_HEARTBEAT_LIGHT_CONTEXT` | Set to `true` to skip bootstrap-file injection during heartbeat/cron turns — reduces token usage. Useful when heartbeats only need `HEARTBEAT.md` context |
+| `OPENCLAW_TZ` | IANA timezone for the container (e.g., `America/New_York`, `Europe/London`). Affects cron scheduling and timestamps. Default: UTC |
 
 ---
 

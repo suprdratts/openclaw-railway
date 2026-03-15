@@ -452,11 +452,19 @@ start_gateway() {
     fi
   fi
 
+  # Build env -i command with optional timezone
+  TZ_ENV=""
+  if [ -n "${OPENCLAW_TZ:-}" ]; then
+    TZ_ENV="TZ=${OPENCLAW_TZ}"
+    echo "[entrypoint] Timezone: ${OPENCLAW_TZ}"
+  fi
+
   env -i \
     HOME=/home/openclaw \
     PATH=/data/bin:/usr/local/bin:/usr/bin:/bin \
     OPENCLAW_STATE_DIR=/data/.openclaw \
     NODE_ENV=production \
+    ${TZ_ENV:+$TZ_ENV} \
     su openclaw -c "cd /data/workspace && openclaw gateway run --port ${GATEWAY_PORT} --compact 2>&1" | node /app/src/log-bridge.js ${LOG_BRIDGE_ARGS} &
   GATEWAY_PID=$!
 

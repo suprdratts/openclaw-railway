@@ -376,6 +376,14 @@ function buildConfig() {
     console.log(`[build-config] Extra env keys injected: ${extraKeys.filter(k => process.env[k]).join(', ') || 'none'}`);
   }
 
+  // --- Timezone Override (v2026.3.13+) ---
+  // OPENCLAW_TZ sets the container timezone for cron scheduling and timestamps.
+  // Passed through to the gateway via config.env so it takes effect even with env -i.
+  if (process.env.OPENCLAW_TZ) {
+    config.env.OPENCLAW_TZ = process.env.OPENCLAW_TZ;
+    console.log(`[build-config] Timezone: ${process.env.OPENCLAW_TZ}`);
+  }
+
   // --- Agent Identity ---
   // OpenClaw moved identity under agents.list[] (top-level identity is legacy)
   if (process.env.AGENT_NAME) {
