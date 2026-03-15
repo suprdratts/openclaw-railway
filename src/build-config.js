@@ -133,6 +133,30 @@ function configureEmbeddings(config) {
 }
 
 /**
+ * Auto-configure imageModel for the image tool.
+ * Uses LLM_IMAGE_MODEL if set, otherwise falls back to the primary model.
+ * If the primary model doesn't support vision, the gateway will return
+ * a clear error at invocation time rather than a warning on every turn.
+ */
+function configureImageModel(config) {
+  const imageModel = process.env.LLM_IMAGE_MODEL || process.env.LLM_PRIMARY_MODEL;
+  if (!imageModel) {
+    console.log('[build-config] Image model: no model available (LLM_PRIMARY_MODEL not set)');
+    return;
+  }
+
+  config.agents = config.agents || {};
+  config.agents.defaults = config.agents.defaults || {};
+  config.agents.defaults.imageModel = imageModel;
+
+  if (process.env.LLM_IMAGE_MODEL) {
+    console.log(`[build-config] Image model: ${imageModel} (explicit)`);
+  } else {
+    console.log(`[build-config] Image model: ${imageModel} (from primary)`);
+  }
+}
+
+/**
  * Write a workspace marker when SECURITY_TIER=3 is set via env var
  * but capped at Tier 2. The agent reads this and guides the user to SSH.
  */
@@ -208,6 +232,9 @@ function buildConfig() {
 
   // --- Embeddings ---
   configureEmbeddings(config);
+
+  // --- Image Model ---
+  configureImageModel(config);
 
   // --- Brave Search API Key (for web_search tool) ---
   if (process.env.BRAVE_API_KEY) {
@@ -454,6 +481,7 @@ function main() {
   if (debugConfig.tools?.web?.search?.apiKey) {
     debugConfig.tools.web.search.apiKey = '[REDACTED]';
   }
+  // imageModel is not a secret (just a model ID), no redaction needed
   if (debugConfig.env) {
     for (const key of Object.keys(debugConfig.env)) {
       debugConfig.env[key] = '[REDACTED]';

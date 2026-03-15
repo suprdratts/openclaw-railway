@@ -65,6 +65,7 @@ You **must** set `LLM_PRIMARY_MODEL` to match your provider.
 | `LLM_HEARTBEAT_MODEL` | Optional - Cheap model for periodic check-ins |
 | `LLM_SUBAGENT_MODEL` | Optional - Model for delegated tasks |
 | `LLM_FALLBACK_MODELS` | Optional - Comma-separated fallback list |
+| `LLM_IMAGE_MODEL` | Optional - Vision model for image analysis (defaults to primary model) |
 
 ### Format
 
