@@ -31,11 +31,20 @@ if ls /data/bin/* >/dev/null 2>&1; then
   done
 fi
 
-# Symlink media directory into workspace so the image tool can access
-# inbound photos/voice messages. workspaceOnly blocks paths outside
-# /data/workspace/ — this symlink gives the gateway a workspace-valid path.
-# If the gateway resolves symlinks and still blocks, this is a no-op.
-ln -sf /data/.openclaw/media /data/workspace/media
+# Reverse-symlink media: real files live in workspace, gateway writes through symlink.
+# The image tool uses realpath() to check paths against workspaceOnly. By making
+# /data/.openclaw/media a symlink pointing INTO /data/workspace/media, files
+# resolve to workspace paths and pass the sandbox check. This preserves
+# workspaceOnly while enabling vision at all tiers.
+mkdir -p /data/workspace/media/inbound
+chown openclaw:openclaw /data/workspace/media /data/workspace/media/inbound
+# Move any existing media files into workspace (first deploy migration)
+if [ -d "/data/.openclaw/media/inbound" ] && [ ! -L "/data/.openclaw/media" ]; then
+  cp -a /data/.openclaw/media/inbound/* /data/workspace/media/inbound/ 2>/dev/null
+  rm -rf /data/.openclaw/media
+fi
+# Create or refresh the symlink
+ln -sfn /data/workspace/media /data/.openclaw/media
 
 echo "[entrypoint] Data directories ready"
 
