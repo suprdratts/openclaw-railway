@@ -11,6 +11,10 @@ permissions:
 jobs:
   check-version:
     runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.versions.outputs.latest }}
+      last: ${{ steps.versions.outputs.last }}
+      is_new: ${{ steps.check.outputs.is_new }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,55 +38,272 @@ jobs:
         id: check
         run: |
           EXISTING=$(gh issue list --search "OpenClaw v${{ steps.versions.outputs.latest }} in:title" --label "upstream" --json number --jq 'length')
-          echo "exists=$EXISTING" >> $GITHUB_OUTPUT
+          if [ "$EXISTING" = "0" ]; then
+            echo "is_new=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_new=false" >> $GITHUB_OUTPUT
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Open issue for new version
-        if: steps.check.outputs.exists == '0'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LATEST: ${{ steps.versions.outputs.latest }}
-          LAST: ${{ steps.versions.outputs.last }}
+  validate:
+    needs: check-version
+    if: needs.check-version.outputs.is_new == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      build_ok: ${{ steps.build.outputs.success }}
+      config_ok: ${{ steps.config.outputs.success }}
+      config_warnings: ${{ steps.config.outputs.warnings }}
+      gateway_ok: ${{ steps.gateway.outputs.success }}
+      gateway_warnings: ${{ steps.gateway.outputs.warnings }}
+      version_installed: ${{ steps.config.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        id: build
         run: |
-          cat > /tmp/issue-body.md << 'BODY'
-          ## New OpenClaw version detected
+          if docker build -t openclaw-test . 2>&1 | tee /tmp/build.log; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
 
-          ## What to check
+      - name: Test config generation
+        id: config
+        if: steps.build.outputs.success == 'true'
+        run: |
+          # Run build-config.js with test env vars inside the container
+          # This tests the same code path Railway uses on deploy
+          docker run --rm \
+            -e OPENROUTER_API_KEY=sk-or-test-fake-key-for-validation \
+            -e LLM_PRIMARY_MODEL=openrouter/test/fake-model \
+            -e TELEGRAM_BOT_TOKEN=123456:FAKE-TOKEN-FOR-VALIDATION \
+            -e TELEGRAM_OWNER_ID=999999999 \
+            -e SECURITY_TIER=0 \
+            --entrypoint="" \
+            openclaw-test \
+            sh -c '
+              # Get installed version
+              VERSION=$(openclaw --version 2>/dev/null || echo "unknown")
+              echo "OPENCLAW_VERSION=$VERSION"
 
-          - [ ] Read changelog / release notes for breaking changes
-          - [ ] Config schema: keys in `defaults.json` and `build-config.js` still valid
-          - [ ] exec-approvals format unchanged (`version`, `agents.main.allowlist[].pattern`)
-          - [ ] CLI flags: `gateway run --port --compact` still works
-          - [ ] Tool names: no renames in allow/deny lists
-          - [ ] `tools.fs.workspaceOnly` still enforced
-          - [ ] Security advisories (OC-XX format)
-          - [ ] Check if `tools.web.urlAllowlist` has re-landed (H7)
+              # Run config generation (same as entrypoint step 4)
+              node /app/src/build-config.js 2>&1
+              CONFIG_EXIT=$?
 
-          ## Smoke test
+              # Check if config was generated and is valid JSON
+              if [ $CONFIG_EXIT -eq 0 ] && [ -f /data/.openclaw/openclaw.json ]; then
+                echo "CONFIG_GENERATED=true"
+                # Validate JSON structure has expected top-level keys
+                node -e "
+                  const fs = require(\"fs\");
+                  const c = JSON.parse(fs.readFileSync(\"/data/.openclaw/openclaw.json\", \"utf-8\"));
+                  const required = [\"agents\", \"channels\", \"gateway\", \"tools\", \"env\"];
+                  const missing = required.filter(k => !(k in c));
+                  if (missing.length > 0) {
+                    console.log(\"CONFIG_MISSING_KEYS=\" + missing.join(\",\"));
+                  } else {
+                    console.log(\"CONFIG_KEYS_OK=true\");
+                  }
+                  // Check tools structure
+                  if (c.tools?.exec?.security) console.log(\"EXEC_SECURITY=\" + c.tools.exec.security);
+                  if (c.tools?.exec?.ask) console.log(\"EXEC_ASK=\" + c.tools.exec.ask);
+                  if (c.tools?.fs?.workspaceOnly !== undefined) console.log(\"WORKSPACE_ONLY=\" + c.tools.fs.workspaceOnly);
+                "
+              else
+                echo "CONFIG_GENERATED=false"
+              fi
+            ' 2>&1 | tee /tmp/config.log
 
-          ```bash
-          # Redeploy and check logs
-          railway up
-          railway logs --tail 50 | grep "OpenClaw version"
+          # Parse results
+          if grep -q "CONFIG_KEYS_OK=true" /tmp/config.log; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
 
-          # Send a test message to your bot
-          # Verify exec constraints at Tier 0
-          ```
+          VERSION=$(grep "OPENCLAW_VERSION=" /tmp/config.log | head -1 | cut -d= -f2)
+          echo "version=${VERSION:-unknown}" >> $GITHUB_OUTPUT
 
-          ## If changes needed
+          # Capture any warnings
+          WARNINGS=$(grep -i "warning\|unrecognized\|unknown key\|rejected" /tmp/config.log || echo "")
+          if [ -n "$WARNINGS" ]; then
+            # Escape for GitHub Actions output (newlines → literal \n)
+            echo "warnings<<WARN_EOF" >> $GITHUB_OUTPUT
+            echo "$WARNINGS" >> $GITHUB_OUTPUT
+            echo "WARN_EOF" >> $GITHUB_OUTPUT
+          else
+            echo "warnings=" >> $GITHUB_OUTPUT
+          fi
 
-          Update template, commit, push. Close this issue with a note on what changed.
-          If no changes needed, close with "Compatible — no action required."
-          BODY
+      - name: Test gateway startup
+        id: gateway
+        if: steps.config.outputs.success == 'true'
+        run: |
+          # Start the full entrypoint and check if gateway comes up
+          # Use a timeout since the container runs forever normally
+          docker run --rm -d \
+            --name openclaw-gateway-test \
+            -e OPENROUTER_API_KEY=sk-or-test-fake-key-for-validation \
+            -e LLM_PRIMARY_MODEL=openrouter/test/fake-model \
+            -e TELEGRAM_BOT_TOKEN=123456:FAKE-TOKEN-FOR-VALIDATION \
+            -e TELEGRAM_OWNER_ID=999999999 \
+            -e SECURITY_TIER=0 \
+            openclaw-test
+
+          # Wait for startup (entrypoint builds config + starts gateway + health server)
+          echo "Waiting for container startup..."
+          sleep 15
+
+          # Check if container is still running (didn't crash)
+          if docker ps --filter "name=openclaw-gateway-test" --format '{{.Names}}' | grep -q openclaw-gateway-test; then
+            echo "Container still running: good"
+
+            # Check health endpoint
+            HEALTH=$(docker exec openclaw-gateway-test curl -sf http://localhost:8080/healthz 2>/dev/null || echo "FAILED")
+            echo "Health check: $HEALTH"
+
+            # Grab startup logs for analysis
+            docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log
+
+            if [ "$HEALTH" = "OK" ]; then
+              echo "success=true" >> $GITHUB_OUTPUT
+            else
+              echo "success=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Container exited early"
+            docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log || true
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Capture warnings from gateway logs
+          WARNINGS=$(grep -i "unrecognized\|unknown key\|rejected\|deprecated\|breaking" /tmp/gateway.log || echo "")
+          if [ -n "$WARNINGS" ]; then
+            echo "warnings<<GW_WARN_EOF" >> $GITHUB_OUTPUT
+            echo "$WARNINGS" >> $GITHUB_OUTPUT
+            echo "GW_WARN_EOF" >> $GITHUB_OUTPUT
+          else
+            echo "warnings=" >> $GITHUB_OUTPUT
+          fi
+
+          # Cleanup
+          docker rm -f openclaw-gateway-test 2>/dev/null || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-logs
+          path: /tmp/*.log
+          retention-days: 30
+
+  report:
+    needs: [check-version, validate]
+    if: needs.check-version.outputs.is_new == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure issue labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create labels if they don't exist (gh label create is idempotent with --force)
+          gh label create "upstream" --color "0075ca" --description "Upstream OpenClaw version tracking" --force
+          gh label create "compatible" --color "0e8a16" --description "Automated validation passed" --force
+          gh label create "needs-review" --color "fbca04" --description "Automated validation found warnings" --force
+          gh label create "breaking" --color "d93f0b" --description "Automated validation failed" --force
+
+      - name: Determine status and create issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LATEST: ${{ needs.check-version.outputs.latest }}
+          LAST: ${{ needs.check-version.outputs.last }}
+          BUILD_OK: ${{ needs.validate.outputs.build_ok }}
+          CONFIG_OK: ${{ needs.validate.outputs.config_ok }}
+          CONFIG_WARNINGS: ${{ needs.validate.outputs.config_warnings }}
+          GATEWAY_OK: ${{ needs.validate.outputs.gateway_ok }}
+          GATEWAY_WARNINGS: ${{ needs.validate.outputs.gateway_warnings }}
+          VERSION_INSTALLED: ${{ needs.validate.outputs.version_installed }}
+        run: |
+          # Determine overall status
+          if [ "$BUILD_OK" = "true" ] && [ "$CONFIG_OK" = "true" ] && [ "$GATEWAY_OK" = "true" ] && [ -z "$CONFIG_WARNINGS" ] && [ -z "$GATEWAY_WARNINGS" ]; then
+            STATUS="compatible"
+            EMOJI="white_check_mark"
+            TITLE="Upstream: OpenClaw v${LATEST} — compatible"
+          elif [ "$BUILD_OK" = "true" ] && [ "$CONFIG_OK" = "true" ]; then
+            STATUS="needs-review"
+            EMOJI="warning"
+            TITLE="Upstream: OpenClaw v${LATEST} — needs review"
+          else
+            STATUS="breaking"
+            EMOJI="x"
+            TITLE="Upstream: OpenClaw v${LATEST} — BREAKING"
+          fi
+
+          # Build issue body
+          cat > /tmp/issue-body.md << EOF
+          ## :${EMOJI}: OpenClaw v${LATEST}
+
+          **Previous tracked:** ${LAST:-unknown}
+          **Installed version:** ${VERSION_INSTALLED:-unknown}
+
+          ## Automated Validation Results
+
+          | Check | Result |
+          |-------|--------|
+          | Docker build | $([ "$BUILD_OK" = "true" ] && echo ":white_check_mark: Passed" || echo ":x: **FAILED**") |
+          | Config generation | $([ "$CONFIG_OK" = "true" ] && echo ":white_check_mark: Passed" || echo ":x: **FAILED**") |
+          | Gateway startup + healthz | $([ "$GATEWAY_OK" = "true" ] && echo ":white_check_mark: Passed" || echo ":x: **FAILED**") |
+          EOF
+
+          # Add warnings section if any
+          if [ -n "$CONFIG_WARNINGS" ] || [ -n "$GATEWAY_WARNINGS" ]; then
+            cat >> /tmp/issue-body.md << 'EOF'
+
+          ## :warning: Warnings
+
+          These may indicate config keys that changed upstream. Review before deploying.
+
+          EOF
+            if [ -n "$CONFIG_WARNINGS" ]; then
+              echo '```' >> /tmp/issue-body.md
+              echo "$CONFIG_WARNINGS" >> /tmp/issue-body.md
+              echo '```' >> /tmp/issue-body.md
+            fi
+            if [ -n "$GATEWAY_WARNINGS" ]; then
+              echo '```' >> /tmp/issue-body.md
+              echo "$GATEWAY_WARNINGS" >> /tmp/issue-body.md
+              echo '```' >> /tmp/issue-body.md
+            fi
+          fi
+
+          # Add manual checklist
+          cat >> /tmp/issue-body.md << 'EOF'
+
+          ## Manual Review Checklist
+
+          - [ ] Read [changelog / release notes](https://github.com/openclaw/openclaw/releases) for breaking changes
+          - [ ] Security advisories (check for OC-XX format CVEs)
+          - [ ] Check if `tools.web.urlAllowlist` has re-landed ([PR #19042](https://github.com/openclaw/openclaw/pull/19042))
+          - [ ] Update MEMORY.md with upstream changes
+
+          ## Action
+
+          - **If compatible:** Close with "Compatible — no template changes needed"
+          - **If changes needed:** Create a PR with fixes, reference this issue
+          - **If breaking:** Investigate immediately — users on `@latest` are affected
+
+          *Validation logs available in the [workflow run artifacts](../actions).*
+          EOF
 
           # Strip leading whitespace from heredoc
           sed -i 's/^          //' /tmp/issue-body.md
 
-          # Inject version info at the top
-          sed -i "s/## New OpenClaw version detected/## New OpenClaw version detected\n\n**Latest on npm:** v${LATEST}\n**Previous tracked:** ${LAST:-unknown}/" /tmp/issue-body.md
-
           gh issue create \
-            --title "Upstream: OpenClaw v${LATEST} released" \
+            --title "$TITLE" \
             --label "upstream" \
+            --label "$STATUS" \
             --body-file /tmp/issue-body.md
