@@ -337,20 +337,25 @@ if [ -n "$EXEC_EXTRA_COMMANDS" ] && [ -f "$APPROVALS_HOME" ]; then
   done
 fi
 
-# Harden exec-approvals permissions:
+# Harden exec-approvals permissions (tier-aware):
 #   File: root:openclaw 660 — root owns, gateway (openclaw group) can read+write
 #     (gateway updates lastUsedCommand metadata at runtime on each exec call)
-#   Dir:  root:openclaw 750 — openclaw can traverse + create files at runtime
-#     (gateway creates exec-approvals.json at Tier 2+ for its own state tracking)
+#   Dir permissions differ by tier:
+#     Tier 0-1: 750 — gateway can traverse+read, cannot create new files
+#               (exec-approvals.json already deployed by entrypoint above)
+#     Tier 2+:  770 — gateway needs to create exec-approvals.json at runtime
+#               (we deleted it at line 310 since full exec doesn't use allowlists,
+#                but the gateway still creates it for internal state tracking)
+chown root:openclaw "$(dirname "$APPROVALS_HOME")"
 if [ -f "$APPROVALS_HOME" ]; then
   chown root:openclaw "$APPROVALS_HOME"
   chmod 660 "$APPROVALS_HOME"
+  chmod 750 "$(dirname "$APPROVALS_HOME")"
+  echo "[entrypoint] Exec-approvals: file 660, dir 750 (Tier ${SECURITY_TIER})"
+else
+  chmod 770 "$(dirname "$APPROVALS_HOME")"
+  echo "[entrypoint] Exec-approvals: no file, dir 770 (Tier ${SECURITY_TIER} — gateway creates at runtime)"
 fi
-# Always set dir permissions — gateway needs write access even at Tier 2+
-# to create/update exec-approvals.json for runtime state tracking
-chown root:openclaw "$(dirname "$APPROVALS_HOME")"
-chmod 770 "$(dirname "$APPROVALS_HOME")"
-echo "[entrypoint] Exec-approvals dir: root:openclaw 770 (gateway can create files)"
 
 # -----------------------------------------------------------------------------
 # 4. Build config from environment variables (always regenerate)
