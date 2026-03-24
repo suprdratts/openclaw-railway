@@ -459,6 +459,7 @@ fi
 #     openclaw.json (a persistent, on-disk attack surface).
 # -----------------------------------------------------------------------------
 SECRETS_ENV_FILE="/data/.openclaw/.secrets.env"
+trap 'rm -f "$SECRETS_ENV_FILE"' EXIT
 
 # Collect all secret env vars into a sourceable file
 install -m 600 /dev/null "$SECRETS_ENV_FILE"
