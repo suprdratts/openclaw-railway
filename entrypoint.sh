@@ -393,15 +393,17 @@ fi
 #     Tier 2+:  770 — gateway needs to create exec-approvals.json at runtime
 #               (we deleted it at line 310 since full exec doesn't use allowlists,
 #                but the gateway still creates it for internal state tracking)
-chown root:openclaw "$(dirname "$APPROVALS_HOME")"
+# Always harden the directory, regardless of whether exec-approvals file exists.
+# At Tier 2+ the gateway may try to create exec-approvals.json at runtime for
+# internal state tracking — it will get EACCES but this is non-fatal (the gateway
+# logs a warning and continues). The alternative (770) was overly permissive.
+chown root:openclaw /home/openclaw/.openclaw
+chmod 750 /home/openclaw/.openclaw
+
 if [ -f "$APPROVALS_HOME" ]; then
   chown root:openclaw "$APPROVALS_HOME"
   chmod 660 "$APPROVALS_HOME"
-  chmod 750 "$(dirname "$APPROVALS_HOME")"
-  echo "[entrypoint] Exec-approvals: file 660, dir 750 (Tier ${SECURITY_TIER})"
-else
-  chmod 770 "$(dirname "$APPROVALS_HOME")"
-  echo "[entrypoint] Exec-approvals: no file, dir 770 (Tier ${SECURITY_TIER} — gateway creates at runtime)"
+  echo "[entrypoint] Exec-approvals hardened (root:openclaw 660, dir 750)"
 fi
 
 # -----------------------------------------------------------------------------
