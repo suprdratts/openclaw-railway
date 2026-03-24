@@ -364,6 +364,11 @@ if [ -n "$EXEC_EXTRA_COMMANDS" ] && [ -f "$APPROVALS_HOME" ]; then
   for cmd in "${EXTRA_CMDS[@]}"; do
     cmd="$(echo "$cmd" | xargs)"  # trim whitespace
     [ -z "$cmd" ] && continue
+    # Validate: alphanumeric, dash, underscore only — blocks shell injection and path traversal
+    if ! echo "$cmd" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+      echo "[entrypoint] WARNING: Invalid EXEC_EXTRA_COMMANDS value '$cmd' — must be alphanumeric/dash/underscore only. Skipping."
+      continue
+    fi
     # Inject entry into the allowlist array using node (no python3 in container)
     node -e "
       const fs = require('fs');
