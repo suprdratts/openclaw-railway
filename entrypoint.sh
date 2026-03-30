@@ -283,6 +283,22 @@ if [ -f "$AGENTS_DST" ]; then
   mv "${AGENTS_DST}.tmp" "$AGENTS_DST"
   rm -f "$TIER_INJECT_FILE"
   echo "[entrypoint] Tier ${SECURITY_TIER} injected into AGENTS.md"
+
+  # Inject FOCUS.md contents if it exists on the volume
+  FOCUS_FILE="/data/workspace/FOCUS.md"
+  if [ -f "$FOCUS_FILE" ]; then
+    FOCUS_INJECT_FILE=$(mktemp)
+    cat "$FOCUS_FILE" > "$FOCUS_INJECT_FILE"
+    awk '
+      /<!-- FOCUS_INJECT -->/ { while ((getline line < "'"$FOCUS_INJECT_FILE"'") > 0) print line; next }
+      { print }
+    ' "$AGENTS_DST" > "${AGENTS_DST}.tmp"
+    mv "${AGENTS_DST}.tmp" "$AGENTS_DST"
+    rm -f "$FOCUS_INJECT_FILE"
+    echo "[entrypoint] FOCUS.md injected into AGENTS.md"
+  else
+    echo "[entrypoint] No FOCUS.md found, skipping focus injection"
+  fi
 fi
 
 # Inject tier-specific content into TOOLS.md before locking

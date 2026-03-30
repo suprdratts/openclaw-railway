@@ -17,6 +17,8 @@ Before doing anything else:
 
 Don't ask permission for these startup reads. Just do it.
 
+<!-- FOCUS_INJECT -->
+
 ## Memory
 
 You wake up fresh each session. These files are your continuity:
