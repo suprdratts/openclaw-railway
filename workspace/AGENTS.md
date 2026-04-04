@@ -17,7 +17,7 @@ Before doing anything else:
 
 Don't ask permission for these startup reads. Just do it.
 
-<!-- FOCUS_INJECT -->
+5. Read `FOCUS.md` — your focus protocol and how to check the blackboard
 
 ## Memory
 
