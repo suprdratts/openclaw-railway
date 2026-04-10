@@ -1,0 +1,471 @@
+{
+  "steps": [
+    {
+      "id": "provider",
+      "title": "LLM Provider",
+      "subtitle": "Which AI provider will power your agent?",
+      "fields": [
+        {
+          "key": "OPENROUTER_API_KEY",
+          "label": "OpenRouter API Key",
+          "type": "password",
+          "description": "One key, all models. Recommended for most users.",
+          "placeholder": "sk-or-...",
+          "required": false,
+          "group": "openrouter",
+          "link": "https://openrouter.ai/keys"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "label": "OpenAI API Key",
+          "type": "password",
+          "description": "GPT models. Also enables voice transcription.",
+          "placeholder": "sk-...",
+          "required": false,
+          "group": "openai"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "label": "Anthropic API Key",
+          "type": "password",
+          "description": "Claude models.",
+          "placeholder": "sk-ant-...",
+          "required": false,
+          "group": "anthropic"
+        },
+        {
+          "key": "GOOGLE_AI_API_KEY",
+          "label": "Google AI Studio API Key",
+          "type": "password",
+          "description": "Gemini models.",
+          "required": false,
+          "group": "google"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "label": "Groq API Key",
+          "type": "password",
+          "description": "Fast inference. Also enables voice transcription.",
+          "placeholder": "gsk_...",
+          "required": false,
+          "group": "groq"
+        },
+        {
+          "key": "DEEPSEEK_API_KEY",
+          "label": "DeepSeek API Key",
+          "type": "password",
+          "description": "DeepSeek models.",
+          "required": false,
+          "group": "deepseek"
+        },
+        {
+          "key": "MISTRAL_API_KEY",
+          "label": "Mistral API Key",
+          "type": "password",
+          "description": "Mistral models.",
+          "required": false,
+          "group": "mistral"
+        },
+        {
+          "key": "XAI_API_KEY",
+          "label": "xAI API Key",
+          "type": "password",
+          "description": "Grok models.",
+          "required": false,
+          "group": "xai"
+        },
+        {
+          "key": "TOGETHER_API_KEY",
+          "label": "Together AI API Key",
+          "type": "password",
+          "description": "Together AI models.",
+          "required": false,
+          "group": "together"
+        },
+        {
+          "key": "FIREWORKS_API_KEY",
+          "label": "Fireworks AI API Key",
+          "type": "password",
+          "description": "Fireworks AI models.",
+          "required": false,
+          "group": "fireworks"
+        },
+        {
+          "key": "KIMI_API_KEY",
+          "label": "Kimi API Key",
+          "type": "password",
+          "description": "Kimi Coding models.",
+          "required": false,
+          "group": "kimi"
+        },
+        {
+          "key": "MOONSHOT_API_KEY",
+          "label": "Moonshot API Key",
+          "type": "password",
+          "description": "Moonshot AI (Kimi) models.",
+          "required": false,
+          "group": "moonshot"
+        },
+        {
+          "key": "VENICE_API_KEY",
+          "label": "Venice AI API Key",
+          "type": "password",
+          "description": "Privacy-focused AI models.",
+          "required": false,
+          "group": "venice"
+        },
+        {
+          "key": "CLOUDFLARE_API_KEY",
+          "label": "Cloudflare AI API Key",
+          "type": "password",
+          "description": "Cloudflare AI models.",
+          "required": false,
+          "group": "cloudflare"
+        },
+        {
+          "key": "ZAI_API_KEY",
+          "label": "Z.AI API Key",
+          "type": "password",
+          "description": "Z.AI models.",
+          "required": false,
+          "group": "zai"
+        },
+        {
+          "key": "LLM_API_KEY",
+          "label": "Generic LLM API Key",
+          "type": "password",
+          "description": "Fallback key used if no specific provider key is set.",
+          "required": false,
+          "group": "generic"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "label": "AWS Access Key ID",
+          "type": "password",
+          "description": "For AWS Bedrock models.",
+          "required": false,
+          "group": "aws"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "label": "AWS Secret Access Key",
+          "type": "password",
+          "description": "For AWS Bedrock models.",
+          "required": false,
+          "group": "aws"
+        },
+        {
+          "key": "AWS_REGION",
+          "label": "AWS Region",
+          "type": "text",
+          "description": "AWS region for Bedrock.",
+          "placeholder": "us-east-1",
+          "required": false,
+          "group": "aws"
+        }
+      ]
+    },
+    {
+      "id": "model",
+      "title": "Model Selection",
+      "subtitle": "Which model should your agent use?",
+      "fields": [
+        {
+          "key": "LLM_PRIMARY_MODEL",
+          "label": "Primary Model",
+          "type": "text",
+          "description": "The main model for conversations. Format: provider/model-name",
+          "placeholder": "openrouter/minimax/minimax-m2.7",
+          "required": true,
+          "examples": {
+            "openrouter": "openrouter/minimax/minimax-m2.7",
+            "openai": "openai/gpt-4o",
+            "anthropic": "anthropic/claude-sonnet-4-20250514",
+            "google": "google/gemini-2.5-flash",
+            "groq": "groq/llama-3.3-70b-versatile",
+            "deepseek": "deepseek/deepseek-chat",
+            "mistral": "mistral/mistral-large-latest",
+            "xai": "xai/grok-3",
+            "together": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "fireworks": "fireworks/accounts/fireworks/models/llama-v3p3-70b-instruct",
+            "kimi": "kimi/kimi-k2.5",
+            "moonshot": "moonshot/moonshot-v1-auto",
+            "venice": "venice/llama-3.3-70b",
+            "zai": "zai/zai-ds-r1"
+          }
+        },
+        {
+          "key": "LLM_HEARTBEAT_MODEL",
+          "label": "Heartbeat Model",
+          "type": "text",
+          "description": "Cheap model for periodic check-ins. Optional — saves cost on background tasks.",
+          "placeholder": "groq/llama-3.1-8b-instant",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "LLM_SUBAGENT_MODEL",
+          "label": "Sub-agent Model",
+          "type": "text",
+          "description": "Model for delegated sub-tasks. Optional — defaults to primary model.",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "LLM_FALLBACK_MODELS",
+          "label": "Fallback Models",
+          "type": "text",
+          "description": "Comma-separated list of fallback models if primary is unavailable.",
+          "placeholder": "openrouter/google/gemini-2.5-flash,openrouter/deepseek/deepseek-chat",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "LLM_IMAGE_MODEL",
+          "label": "Image Analysis Model",
+          "type": "text",
+          "description": "Vision model for image analysis. Defaults to primary model.",
+          "required": false,
+          "advanced": true
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "Chat Channel",
+      "subtitle": "How will you talk to your agent?",
+      "fields": [
+        {
+          "key": "TELEGRAM_BOT_TOKEN",
+          "label": "Telegram Bot Token",
+          "type": "password",
+          "description": "Get this from @BotFather on Telegram.",
+          "placeholder": "123456789:ABC...",
+          "required": false,
+          "group": "telegram",
+          "link": "https://t.me/BotFather"
+        },
+        {
+          "key": "TELEGRAM_OWNER_ID",
+          "label": "Telegram Owner ID",
+          "type": "text",
+          "description": "Your numeric user ID. Get it from @userinfobot on Telegram.",
+          "placeholder": "987654321",
+          "required": false,
+          "group": "telegram",
+          "link": "https://t.me/userinfobot"
+        },
+        {
+          "key": "DISCORD_BOT_TOKEN",
+          "label": "Discord Bot Token",
+          "type": "password",
+          "description": "From the Discord Developer Portal.",
+          "placeholder": "MTIz...",
+          "required": false,
+          "group": "discord"
+        },
+        {
+          "key": "DISCORD_OWNER_ID",
+          "label": "Discord Owner ID",
+          "type": "text",
+          "description": "Your Discord user ID. Enable Developer Mode, right-click your name, Copy User ID.",
+          "placeholder": "123456789012345678",
+          "required": false,
+          "group": "discord"
+        },
+        {
+          "key": "SLACK_BOT_TOKEN",
+          "label": "Slack Bot Token",
+          "type": "password",
+          "description": "Bot token from your Slack app.",
+          "placeholder": "xoxb-...",
+          "required": false,
+          "group": "slack"
+        },
+        {
+          "key": "SLACK_APP_TOKEN",
+          "label": "Slack App Token",
+          "type": "password",
+          "description": "App-level token for Socket Mode.",
+          "placeholder": "xapp-...",
+          "required": false,
+          "group": "slack"
+        },
+        {
+          "key": "SLACK_OWNER_ID",
+          "label": "Slack Owner ID",
+          "type": "text",
+          "description": "Your Slack user ID.",
+          "placeholder": "U01234567",
+          "required": false,
+          "group": "slack"
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security Tier",
+      "subtitle": "How much power should your agent have?",
+      "fields": [
+        {
+          "key": "SECURITY_TIER",
+          "label": "Security Tier",
+          "type": "select",
+          "description": "Controls your agent's capabilities. Start at 0, unlock more as you gain trust.",
+          "default": "0",
+          "required": false,
+          "options": [
+            { "value": "0", "label": "Tier 0 — Personal Assistant", "description": "Web, memory, read/write, cron. Safe default." },
+            { "value": "1", "label": "Tier 1 — Capable Agent", "description": "+ curated shell (find, git, wc, sort, uniq)" },
+            { "value": "2", "label": "Tier 2 — Power User", "description": "+ full shell, remote browser, sub-agents" },
+            { "value": "3", "label": "Tier 3 — Operator", "description": "Applies Tier 2, guides you to SSH for the rest" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "Optional Extras",
+      "subtitle": "Fine-tune your setup. All optional — skip if unsure.",
+      "fields": [
+        {
+          "key": "AGENT_NAME",
+          "label": "Agent Name",
+          "type": "text",
+          "description": "Display name for your agent.",
+          "placeholder": "Atlas",
+          "required": false
+        },
+        {
+          "key": "OPENCLAW_TZ",
+          "label": "Timezone",
+          "type": "text",
+          "description": "IANA timezone for cron scheduling and timestamps.",
+          "placeholder": "America/New_York",
+          "default": "UTC",
+          "required": false
+        },
+        {
+          "key": "BRAVE_API_KEY",
+          "label": "Brave Search API Key",
+          "type": "password",
+          "description": "Enables the web_search tool. Without this, web search calls will fail.",
+          "required": false,
+          "link": "https://brave.com/search/api/"
+        },
+        {
+          "key": "BRAVE_SEARCH_MODE",
+          "label": "Brave Search Mode",
+          "type": "select",
+          "description": "Search result format.",
+          "required": false,
+          "default": "standard",
+          "options": [
+            { "value": "standard", "label": "Standard" },
+            { "value": "llm-context", "label": "LLM Context — grounded snippets with source metadata" }
+          ]
+        },
+        {
+          "key": "LLM_EMBEDDING_MODEL",
+          "label": "Embedding Model",
+          "type": "text",
+          "description": "Override the default embedding model for semantic memory.",
+          "placeholder": "openai/text-embedding-3-small",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "LLM_HEARTBEAT_LIGHT_CONTEXT",
+          "label": "Light Heartbeat Context",
+          "type": "select",
+          "description": "Skip injecting bootstrap files during heartbeat/cron turns to save tokens.",
+          "required": false,
+          "advanced": true,
+          "options": [
+            { "value": "false", "label": "Off — full context on every turn" },
+            { "value": "true", "label": "On — lightweight heartbeats" }
+          ]
+        },
+        {
+          "key": "DEEPGRAM_API_KEY",
+          "label": "Deepgram API Key",
+          "type": "password",
+          "description": "Dedicated voice transcription provider. Only needed if your LLM provider doesn't support audio.",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "GATEWAY_TOKEN",
+          "label": "Gateway Token",
+          "type": "password",
+          "description": "Authentication token for the gateway. Auto-generated if not set.",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "EXEC_EXTRA_COMMANDS",
+          "label": "Extra Exec Commands",
+          "type": "text",
+          "description": "Comma-separated binary names in /data/bin/ to add to exec allowlist (Tier 0-1 only).",
+          "placeholder": "core-edge,my-tool",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "EXTRA_ENV_KEYS",
+          "label": "Extra Environment Keys",
+          "type": "text",
+          "description": "Comma-separated env var names to pass through to the gateway process.",
+          "placeholder": "CORE_URL,CORE_API_KEY",
+          "required": false,
+          "advanced": true
+        },
+        {
+          "key": "TOOL_OBSERVER_ENABLED",
+          "label": "Tool Observer",
+          "type": "select",
+          "description": "Send tool call events to a Telegram topic or Discord thread for monitoring.",
+          "required": false,
+          "advanced": true,
+          "options": [
+            { "value": "false", "label": "Off" },
+            { "value": "true", "label": "On" }
+          ]
+        },
+        {
+          "key": "TOOL_OBSERVER_CHAT_ID",
+          "label": "Observer Chat ID",
+          "type": "text",
+          "description": "Chat/channel ID to send observer events to. Defaults to owner ID.",
+          "required": false,
+          "advanced": true,
+          "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" }
+        },
+        {
+          "key": "TOOL_OBSERVER_THREAD_ID",
+          "label": "Observer Thread ID",
+          "type": "text",
+          "description": "Telegram topic or Discord thread ID for observer events.",
+          "required": false,
+          "advanced": true,
+          "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" }
+        },
+        {
+          "key": "TOOL_OBSERVER_VERBOSITY",
+          "label": "Observer Verbosity",
+          "type": "select",
+          "description": "How much detail to include in observer events.",
+          "required": false,
+          "default": "normal",
+          "advanced": true,
+          "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" },
+          "options": [
+            { "value": "minimal", "label": "Minimal — tool name only" },
+            { "value": "normal", "label": "Normal — with summary" },
+            { "value": "verbose", "label": "Verbose — with duration and status" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenClaw Railway Setup</title>
+  <meta name="description" content="Configure your security-hardened OpenClaw deployment for Railway in under 3 minutes.">
+  <link rel="icon" href="https://openclaw.ai/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+  <h1>OpenClaw Railway Setup</h1>
+  <p>Configure your hardened AI agent in under 3 minutes.</p>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-dot active"></div>
+  <div class="progress-dot"></div>
+  <div class="progress-dot"></div>
+  <div class="progress-dot"></div>
+  <div class="progress-dot"></div>
+  <div class="progress-dot"></div>
+</div>
+
+<div class="wizard">
+
+  <!-- Step 0: Provider -->
+  <div class="step active" data-step="0">
+    <div class="step-header">
+      <h2>LLM Provider</h2>
+      <p>Which AI provider will power your agent? Pick one or more.</p>
+    </div>
+    <div class="provider-grid"></div>
+    <div id="provider-fields"></div>
+    <div class="nav">
+      <div></div>
+      <button class="btn btn-next" disabled>Next</button>
+    </div>
+  </div>
+
+  <!-- Step 1: Model -->
+  <div class="step" data-step="1">
+    <div class="step-header">
+      <h2>Model Selection</h2>
+      <p>Which model should your agent use?</p>
+    </div>
+    <div id="model-fields"></div>
+    <div class="model-hint" style="display:none"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next" disabled>Next</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Channel -->
+  <div class="step" data-step="2">
+    <div class="step-header">
+      <h2>Chat Channel</h2>
+      <p>How will you talk to your agent? Pick one or more.</p>
+    </div>
+    <div class="channel-grid"></div>
+    <div id="channel-fields"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next" disabled>Next</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Security -->
+  <div class="step" data-step="3">
+    <div class="step-header">
+      <h2>Security Tier</h2>
+      <p>How much power should your agent have?</p>
+    </div>
+    <div class="tier-list"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Extras -->
+  <div class="step" data-step="4">
+    <div class="step-header">
+      <h2>Optional Extras</h2>
+      <p>Fine-tune your setup. Everything here is optional.</p>
+    </div>
+    <div id="extras-fields"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next">Generate Config</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Output -->
+  <div class="step" data-step="5">
+    <div class="step-header">
+      <h2>Your Configuration</h2>
+      <p>Copy these into Railway's environment variables.</p>
+    </div>
+
+    <div class="output-instructions">
+      <ol>
+        <li>Click <strong>Deploy on Railway</strong> below</li>
+        <li>In the deploy form, click <strong>Add Variable</strong> for each line</li>
+        <li>Paste the key on the left and value on the right</li>
+        <li>Click <strong>Deploy</strong></li>
+      </ol>
+    </div>
+
+    <div class="var-count"></div>
+    <div class="output-block">
+      <button class="copy-btn">Copy</button>
+      <pre class="output-text"></pre>
+    </div>
+
+    <div class="deploy-link">
+      <a href="#" target="_blank" rel="noopener">
+        <img src="https://railway.com/button.svg" alt="Deploy on Railway">
+      </a>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <a href="https://github.com/Slayga/openclaw-railway">GitHub</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/Slayga/openclaw-railway/blob/main/config/environment.md">Full env var reference</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/Slayga/openclaw-railway/blob/main/docs/SETUP.md">Setup guide</a>
+</div>
+
+<script src="wizard.js"></script>
+</body>
+</html>

@@ -31,3 +31,6 @@ tests/results/
 # Local dev config
 CLAUDE.md
 .claude/
+
+# Playwright
+.playwright-cli/
