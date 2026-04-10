@@ -1,11 +1,11 @@
 (function () {
   "use strict";
 
-  const DEPLOY_URL =
+  var DEPLOY_URL =
     "https://railway.com/deploy/openclaw-railway?referralCode=slayga&utm_medium=integration&utm_source=template&utm_campaign=wizard";
 
-  // Provider definitions for step 1 card grid
-  const PROVIDERS = [
+  // Provider definitions for card grid
+  var PROVIDERS = [
     { id: "openrouter", name: "OpenRouter", tag: "Recommended", tagClass: "recommended", keys: ["OPENROUTER_API_KEY"] },
     { id: "openai", name: "OpenAI", tag: "GPT + voice", keys: ["OPENAI_API_KEY"] },
     { id: "anthropic", name: "Anthropic", tag: "Claude", keys: ["ANTHROPIC_API_KEY"] },
@@ -17,23 +17,34 @@
     { id: "together", name: "Together AI", tag: "", keys: ["TOGETHER_API_KEY"] },
     { id: "fireworks", name: "Fireworks", tag: "", keys: ["FIREWORKS_API_KEY"] },
     { id: "kimi", name: "Kimi", tag: "", keys: ["KIMI_API_KEY"] },
+    { id: "moonshot", name: "Moonshot", tag: "", keys: ["MOONSHOT_API_KEY"] },
     { id: "venice", name: "Venice", tag: "Privacy", keys: ["VENICE_API_KEY"] },
+    { id: "cloudflare", name: "Cloudflare", tag: "", keys: ["CLOUDFLARE_API_KEY"] },
+    { id: "zai", name: "Z.AI", tag: "GLM", keys: ["ZAI_API_KEY"] },
+    { id: "minimax", name: "MiniMax", tag: "API + Plan", keys: ["MINIMAX_API_KEY", "MINIMAX_CODE_PLAN_KEY"] },
+    { id: "vercel", name: "Vercel AI", tag: "Gateway", keys: ["VERCEL_GATEWAY_API_KEY"] },
     { id: "aws", name: "AWS Bedrock", tag: "3 keys", keys: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"] },
   ];
 
-  const CHANNELS = ["telegram", "discord", "slack"];
+  var CHANNELS = ["telegram", "discord", "slack"];
 
-  let varsData = null;
-  let currentStep = 0;
-  let selectedProviders = new Set();
-  let selectedChannels = new Set();
-  let selectedTier = "0";
-  let fieldValues = {};
+  // Step sequences for each mode
+  var QUICK_STEPS = ["provider", "model", "channel", "output"];
+  var FULL_STEPS = ["provider", "model", "channel", "security", "identity", "search", "advanced", "output"];
+
+  var varsData = null;
+  var currentMode = null; // "quick" or "full"
+  var activeSteps = [];
+  var currentStepIndex = 0;
+  var selectedProviders = new Set();
+  var selectedChannels = new Set();
+  var selectedTier = "0";
+  var fieldValues = {};
 
   // Load vars.json and initialize
   fetch("vars.json")
-    .then((r) => r.json())
-    .then((data) => {
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
       varsData = data;
       init();
     });
@@ -43,9 +54,11 @@
     buildModelStep();
     buildChannelStep();
     buildSecurityStep();
-    buildExtrasStep();
-    buildOutputStep();
-    showStep(0);
+    buildFieldStep("identity", "#identity-fields");
+    buildFieldStep("search", "#search-fields");
+    buildFieldStep("advanced", "#advanced-fields");
+    bindModeSelector();
+    bindNav();
   }
 
   function $(sel, parent) {
@@ -55,18 +68,44 @@
     return Array.from((parent || document).querySelectorAll(sel));
   }
 
+  // --- Mode selector ---
+
+  function bindModeSelector() {
+    $$(".mode-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        currentMode = card.dataset.mode;
+        activeSteps = currentMode === "quick" ? QUICK_STEPS.slice() : FULL_STEPS.slice();
+        $("#mode-selector").style.display = "none";
+        $("#wizard").style.display = "block";
+        $("#progress-bar").style.display = "flex";
+        buildProgressDots();
+        showStep(0);
+      });
+    });
+  }
+
+  function buildProgressDots() {
+    var bar = $("#progress-bar");
+    bar.innerHTML = "";
+    activeSteps.forEach(function () {
+      var dot = document.createElement("div");
+      dot.className = "progress-dot";
+      bar.appendChild(dot);
+    });
+  }
+
   // --- Step builders ---
 
   function buildProviderStep() {
-    const grid = $(".provider-grid");
-    PROVIDERS.forEach((p) => {
-      const card = document.createElement("div");
+    var grid = $(".provider-grid");
+    PROVIDERS.forEach(function (p) {
+      var card = document.createElement("div");
       card.className = "provider-card";
       card.dataset.provider = p.id;
       card.innerHTML =
         '<div class="name">' + esc(p.name) + "</div>" +
         (p.tag ? '<div class="tag ' + (p.tagClass || "") + '">' + esc(p.tag) + "</div>" : "");
-      card.addEventListener("click", () => toggleProvider(p.id, card));
+      card.addEventListener("click", function () { toggleProvider(p.id, card); });
       grid.appendChild(card);
     });
   }
@@ -85,15 +124,15 @@
   }
 
   function showProviderFields() {
-    const container = $("#provider-fields");
+    var container = $("#provider-fields");
     container.innerHTML = "";
-    const step = varsData.steps[0];
-    const neededKeys = new Set();
-    selectedProviders.forEach((pid) => {
-      const prov = PROVIDERS.find((p) => p.id === pid);
-      if (prov) prov.keys.forEach((k) => neededKeys.add(k));
+    var step = findStep("provider");
+    var neededKeys = new Set();
+    selectedProviders.forEach(function (pid) {
+      var prov = PROVIDERS.find(function (p) { return p.id === pid; });
+      if (prov) prov.keys.forEach(function (k) { neededKeys.add(k); });
     });
-    step.fields.forEach((f) => {
+    step.fields.forEach(function (f) {
       if (neededKeys.has(f.key)) {
         container.appendChild(buildField(f));
       }
@@ -101,24 +140,25 @@
   }
 
   function buildModelStep() {
-    const container = $("#model-fields");
-    const step = varsData.steps[1];
-    const mainFields = step.fields.filter((f) => !f.advanced);
-    const advFields = step.fields.filter((f) => f.advanced);
+    var container = $("#model-fields");
+    var step = findStep("model");
+    var mainFields = step.fields.filter(function (f) { return !f.advanced; });
+    var advFields = step.fields.filter(function (f) { return f.advanced; });
 
-    mainFields.forEach((f) => container.appendChild(buildField(f)));
+    mainFields.forEach(function (f) { container.appendChild(buildField(f)); });
 
     if (advFields.length) {
-      const toggle = document.createElement("button");
+      var toggle = document.createElement("button");
       toggle.className = "advanced-toggle";
       toggle.type = "button";
-      toggle.innerHTML = '<span class="chevron">&#9654;</span> Advanced model options';
-      const advContainer = document.createElement("div");
+      toggle.innerHTML = "More model options";
+      var advContainer = document.createElement("div");
       advContainer.className = "advanced-fields";
-      advFields.forEach((f) => advContainer.appendChild(buildField(f)));
-      toggle.addEventListener("click", () => {
+      advFields.forEach(function (f) { advContainer.appendChild(buildField(f)); });
+      toggle.addEventListener("click", function () {
         toggle.classList.toggle("open");
         advContainer.classList.toggle("open");
+        toggle.innerHTML = toggle.classList.contains("open") ? "Fewer model options" : "More model options";
       });
       container.appendChild(toggle);
       container.appendChild(advContainer);
@@ -126,13 +166,13 @@
   }
 
   function buildChannelStep() {
-    const grid = $(".channel-grid");
-    CHANNELS.forEach((ch) => {
-      const card = document.createElement("div");
+    var grid = $(".channel-grid");
+    CHANNELS.forEach(function (ch) {
+      var card = document.createElement("div");
       card.className = "channel-card";
       card.dataset.channel = ch;
       card.innerHTML = '<div class="name">' + esc(ch.charAt(0).toUpperCase() + ch.slice(1)) + "</div>";
-      card.addEventListener("click", () => toggleChannel(ch, card));
+      card.addEventListener("click", function () { toggleChannel(ch, card); });
       grid.appendChild(card);
     });
   }
@@ -150,10 +190,10 @@
   }
 
   function showChannelFields() {
-    const container = $("#channel-fields");
+    var container = $("#channel-fields");
     container.innerHTML = "";
-    const step = varsData.steps[2];
-    step.fields.forEach((f) => {
+    var step = findStep("channel");
+    step.fields.forEach(function (f) {
       if (f.group && selectedChannels.has(f.group)) {
         container.appendChild(buildField(f));
       }
@@ -161,18 +201,19 @@
   }
 
   function buildSecurityStep() {
-    const list = $(".tier-list");
-    const step = varsData.steps[3];
-    const field = step.fields[0];
-    field.options.forEach((opt) => {
-      const card = document.createElement("div");
+    var list = $(".tier-list");
+    var step = findStep("security");
+    var field = step.fields[0];
+    field.options.forEach(function (opt) {
+      var card = document.createElement("div");
       card.className = "tier-card" + (opt.value === "0" ? " selected" : "");
       card.dataset.tier = opt.value;
+      var badgeHtml = opt.badge ? '<span class="tier-badge">' + esc(opt.badge) + "</span>" : "";
       card.innerHTML =
-        '<div class="tier-label">' + esc(opt.label) + "</div>" +
+        '<div class="tier-label">' + esc(opt.label) + badgeHtml + "</div>" +
         '<div class="tier-desc">' + esc(opt.description) + "</div>";
-      card.addEventListener("click", () => {
-        $$(".tier-card").forEach((c) => c.classList.remove("selected"));
+      card.addEventListener("click", function () {
+        $$(".tier-card").forEach(function (c) { c.classList.remove("selected"); });
         card.classList.add("selected");
         selectedTier = opt.value;
       });
@@ -180,90 +221,78 @@
     });
   }
 
-  function buildExtrasStep() {
-    const container = $("#extras-fields");
-    const step = varsData.steps[4];
-    const mainFields = step.fields.filter((f) => !f.advanced);
-    const advFields = step.fields.filter((f) => f.advanced);
-
-    mainFields.forEach((f) => container.appendChild(buildField(f)));
-
-    if (advFields.length) {
-      const toggle = document.createElement("button");
-      toggle.className = "advanced-toggle";
-      toggle.type = "button";
-      toggle.innerHTML = '<span class="chevron">&#9654;</span> Advanced options';
-      const advContainer = document.createElement("div");
-      advContainer.className = "advanced-fields";
-      advFields.forEach((f) => advContainer.appendChild(buildField(f)));
-      toggle.addEventListener("click", () => {
-        toggle.classList.toggle("open");
-        advContainer.classList.toggle("open");
-      });
-      container.appendChild(toggle);
-      container.appendChild(advContainer);
-    }
-  }
-
-  function buildOutputStep() {
-    // Built dynamically when shown
+  function buildFieldStep(stepId, containerSel) {
+    var container = $(containerSel);
+    var step = findStep(stepId);
+    if (!step) return;
+    step.fields.forEach(function (f) {
+      container.appendChild(buildField(f));
+    });
   }
 
   // --- Field builder ---
 
   function buildField(f) {
-    const group = document.createElement("div");
+    var group = document.createElement("div");
     group.className = "field-group";
     group.dataset.key = f.key;
 
-    let labelHtml =
+    // Handle dependsOn visibility
+    if (f.dependsOn) {
+      group.dataset.dependsOnKey = f.dependsOn.key;
+      group.dataset.dependsOnValue = f.dependsOn.value;
+      if (fieldValues[f.dependsOn.key] !== f.dependsOn.value) {
+        group.classList.add("hidden");
+      }
+    }
+
+    var labelHtml =
       '<label for="f-' + f.key + '">' + esc(f.label) +
       (f.required ? '<span class="required">*</span>' : "") +
       "</label>";
 
-    let descHtml = "";
+    var descHtml = "";
     if (f.description) {
-      let desc = esc(f.description);
+      var desc = esc(f.description);
       if (f.link) {
         desc += ' <a href="' + esc(f.link) + '" target="_blank" rel="noopener">Get one</a>';
       }
       descHtml = '<div class="field-desc">' + desc + "</div>";
     }
 
-    let inputHtml = "";
+    var inputHtml = "";
     if (f.type === "select" && f.options) {
       inputHtml = '<select id="f-' + f.key + '" data-key="' + f.key + '">';
       if (!f.required) {
-        inputHtml += "<option value=\"\">-</option>";
+        inputHtml += '<option value="">-</option>';
       }
-      f.options.forEach((opt) => {
-        const sel = f.default === opt.value ? " selected" : "";
+      f.options.forEach(function (opt) {
+        var sel = f.default === opt.value ? " selected" : "";
         inputHtml +=
           '<option value="' + esc(opt.value) + '"' + sel + ">" + esc(opt.label) + "</option>";
       });
       inputHtml += "</select>";
     } else {
-      const ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "";
+      var ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "";
       inputHtml =
         '<input type="' + (f.type || "text") + '" id="f-' + f.key + '" data-key="' +
         f.key + '"' + ph + ' autocomplete="off">';
     }
 
-    const errorHtml = '<div class="field-error"></div>';
+    var errorHtml = '<div class="field-error"></div>';
 
     group.innerHTML = labelHtml + descHtml + inputHtml + errorHtml;
 
     // Bind value tracking
-    const input = group.querySelector("input, select");
-    input.addEventListener("input", () => {
+    var input = group.querySelector("input, select");
+    var onUpdate = function () {
       fieldValues[f.key] = input.value;
       group.classList.remove("error");
+      updateDependentFields(f.key, input.value);
       updateNav();
-    });
-    input.addEventListener("change", () => {
-      fieldValues[f.key] = input.value;
-      updateNav();
-    });
+    };
+    input.addEventListener("input", onUpdate);
+    input.addEventListener("change", onUpdate);
 
     // Restore value if exists
     if (fieldValues[f.key]) {
@@ -273,94 +302,153 @@
     return group;
   }
 
-  // --- Model hint ---
+  function updateDependentFields(key, value) {
+    $$('[data-depends-on-key="' + key + '"]').forEach(function (group) {
+      var expectedValue = group.dataset.dependsOnValue;
+      group.classList.toggle("hidden", value !== expectedValue);
+    });
+  }
+
+  // --- Model hint + autofill ---
 
   function updateModelHint() {
-    const hint = $(".model-hint");
+    var hint = $(".model-hint");
+    var autofill = $(".model-autofill");
+    var autofillBtn = $(".btn-autofill");
     if (!hint) return;
-    const step = varsData.steps[1];
-    const modelField = step.fields[0];
+
+    var step = findStep("model");
+    var modelField = step.fields[0];
+
     if (selectedProviders.size === 1) {
-      const pid = Array.from(selectedProviders)[0];
-      const example = modelField.examples && modelField.examples[pid];
+      var pid = Array.from(selectedProviders)[0];
+      var example = modelField.examples && modelField.examples[pid];
       if (example) {
-        hint.textContent = "Example: " + example;
+        hint.textContent = "Suggested for " + providerName(pid) + ":";
         hint.style.display = "block";
-        // Auto-fill placeholder
-        const input = $("#f-LLM_PRIMARY_MODEL");
+        autofillBtn.textContent = example;
+        autofill.style.display = "block";
+        autofillBtn.onclick = function () {
+          var input = $("#f-LLM_PRIMARY_MODEL");
+          if (input) {
+            input.value = example;
+            fieldValues["LLM_PRIMARY_MODEL"] = example;
+            updateNav();
+          }
+        };
+        // Update placeholder
+        var input = $("#f-LLM_PRIMARY_MODEL");
         if (input && !input.value) {
           input.placeholder = example;
         }
         return;
       }
     }
-    hint.textContent = "";
     hint.style.display = "none";
+    autofill.style.display = "none";
+  }
+
+  function providerName(pid) {
+    var p = PROVIDERS.find(function (pr) { return pr.id === pid; });
+    return p ? p.name : pid;
   }
 
   // --- Navigation ---
 
-  const STEP_COUNT = 6; // provider, model, channel, security, extras, output
+  function currentStepId() {
+    return activeSteps[currentStepIndex];
+  }
 
   function showStep(idx) {
-    currentStep = idx;
-    $$(".step").forEach((s, i) => s.classList.toggle("active", i === idx));
+    currentStepIndex = idx;
+    var stepId = activeSteps[idx];
+
+    // Hide all steps, show active
+    $$(".step").forEach(function (s) { s.classList.remove("active"); });
+    var activeStep = $('[data-step-id="' + stepId + '"]');
+    if (activeStep) activeStep.classList.add("active");
 
     // Progress dots
-    $$(".progress-dot").forEach((dot, i) => {
+    $$(".progress-dot").forEach(function (dot, i) {
       dot.classList.toggle("done", i < idx);
       dot.classList.toggle("active", i === idx);
     });
 
-    // On model step, update hint
-    if (idx === 1) updateModelHint();
-
-    // On output step, generate output
-    if (idx === STEP_COUNT - 1) generateOutput();
+    // Step-specific triggers
+    if (stepId === "model") updateModelHint();
+    if (stepId === "output") generateOutput();
 
     updateNav();
+    window.scrollTo(0, 0);
   }
 
   function updateNav() {
-    $$(".step").forEach((step, idx) => {
-      const nextBtn = step.querySelector(".btn-next");
+    $$(".step").forEach(function (step) {
+      var stepId = step.dataset.stepId;
+      var nextBtn = step.querySelector(".btn-next");
       if (!nextBtn) return;
-      if (idx === 0) {
+
+      if (stepId === "provider") {
         nextBtn.disabled = selectedProviders.size === 0;
-      } else if (idx === 1) {
+      } else if (stepId === "model") {
         nextBtn.disabled = !fieldValues["LLM_PRIMARY_MODEL"];
-      } else if (idx === 2) {
+      } else if (stepId === "channel") {
         nextBtn.disabled = selectedChannels.size === 0;
       } else {
         nextBtn.disabled = false;
       }
+
+      // Update label on last step before output
+      var stepIdx = activeSteps.indexOf(stepId);
+      if (stepIdx === activeSteps.length - 2) {
+        nextBtn.textContent = "Generate Config";
+      }
     });
   }
 
-  // Bind navigation buttons
-  document.addEventListener("click", (e) => {
-    if (e.target.closest(".btn-next") && !e.target.closest(".btn-next").disabled) {
-      if (currentStep < STEP_COUNT - 1) showStep(currentStep + 1);
-    }
-    if (e.target.closest(".btn-back")) {
-      if (currentStep > 0) showStep(currentStep - 1);
-    }
-  });
+  function bindNav() {
+    document.addEventListener("click", function (e) {
+      if (e.target.closest(".btn-next") && !e.target.closest(".btn-next").disabled) {
+        if (currentStepIndex < activeSteps.length - 1) showStep(currentStepIndex + 1);
+      }
+      if (e.target.closest(".btn-back")) {
+        if (currentStepIndex > 0) {
+          showStep(currentStepIndex - 1);
+        } else {
+          // Back from first step goes to mode selector
+          resetToModeSelector();
+        }
+      }
+      if (e.target.closest(".btn-restart")) {
+        resetToModeSelector();
+      }
+    });
+  }
+
+  function resetToModeSelector() {
+    $("#wizard").style.display = "none";
+    $("#progress-bar").style.display = "none";
+    $("#mode-selector").style.display = "block";
+    $$(".step").forEach(function (s) { s.classList.remove("active"); });
+    currentMode = null;
+    activeSteps = [];
+    currentStepIndex = 0;
+  }
 
   // --- Output generation ---
 
   function generateOutput() {
-    const lines = [];
-    const comment = (text) => lines.push("# " + text);
-    const blank = () => lines.push("");
+    var lines = [];
+    function comment(text) { lines.push("# " + text); }
+    function blank() { lines.push(""); }
 
     // Provider keys
     comment("LLM Provider");
-    selectedProviders.forEach((pid) => {
-      const prov = PROVIDERS.find((p) => p.id === pid);
+    selectedProviders.forEach(function (pid) {
+      var prov = PROVIDERS.find(function (p) { return p.id === pid; });
       if (prov) {
-        prov.keys.forEach((k) => {
-          const val = fieldValues[k] || "";
+        prov.keys.forEach(function (k) {
+          var val = fieldValues[k] || "";
           if (val) lines.push(k + "=" + val);
         });
       }
@@ -369,18 +457,18 @@
 
     // Model
     comment("Model");
-    const primary = fieldValues["LLM_PRIMARY_MODEL"] || "";
+    var primary = fieldValues["LLM_PRIMARY_MODEL"] || "";
     if (primary) lines.push("LLM_PRIMARY_MODEL=" + primary);
-    ["LLM_HEARTBEAT_MODEL", "LLM_SUBAGENT_MODEL", "LLM_FALLBACK_MODELS", "LLM_IMAGE_MODEL"].forEach((k) => {
+    ["LLM_HEARTBEAT_MODEL", "LLM_SUBAGENT_MODEL", "LLM_FALLBACK_MODELS", "LLM_IMAGE_MODEL"].forEach(function (k) {
       if (fieldValues[k]) lines.push(k + "=" + fieldValues[k]);
     });
     blank();
 
     // Channel
     comment("Channel");
-    selectedChannels.forEach((ch) => {
-      const step = varsData.steps[2];
-      step.fields.forEach((f) => {
+    selectedChannels.forEach(function (ch) {
+      var step = findStep("channel");
+      step.fields.forEach(function (f) {
         if (f.group === ch && fieldValues[f.key]) {
           lines.push(f.key + "=" + fieldValues[f.key]);
         }
@@ -395,26 +483,35 @@
       blank();
     }
 
-    // Extras — only non-empty, non-default values
-    const extrasStep = varsData.steps[4];
-    const extrasLines = [];
-    extrasStep.fields.forEach((f) => {
-      const val = fieldValues[f.key];
-      if (val && val !== f.default && val !== "") {
-        extrasLines.push(f.key + "=" + val);
-      }
-    });
-    if (extrasLines.length) {
-      comment("Extras");
-      extrasLines.forEach((l) => lines.push(l));
+    // Identity
+    var identityLines = collectStepValues("identity");
+    if (identityLines.length) {
+      comment("Identity");
+      identityLines.forEach(function (l) { lines.push(l); });
+      blank();
+    }
+
+    // Search
+    var searchLines = collectStepValues("search");
+    if (searchLines.length) {
+      comment("Search");
+      searchLines.forEach(function (l) { lines.push(l); });
+      blank();
+    }
+
+    // Advanced
+    var advancedLines = collectStepValues("advanced");
+    if (advancedLines.length) {
+      comment("Advanced");
+      advancedLines.forEach(function (l) { lines.push(l); });
       blank();
     }
 
     // Count actual vars (non-comment, non-blank)
-    const varCount = lines.filter((l) => l && !l.startsWith("#")).length;
+    var varCount = lines.filter(function (l) { return l && !l.startsWith("#"); }).length;
 
     // Render
-    const block = $(".output-text");
+    var block = $(".output-text");
     block.textContent = lines.join("\n").trim();
 
     $(".var-count").textContent = varCount + " variable" + (varCount !== 1 ? "s" : "");
@@ -423,16 +520,31 @@
     $(".deploy-link a").href = DEPLOY_URL;
   }
 
+  function collectStepValues(stepId) {
+    var step = findStep(stepId);
+    if (!step) return [];
+    var out = [];
+    step.fields.forEach(function (f) {
+      var val = fieldValues[f.key];
+      if (val && val !== f.default && val !== "") {
+        // Skip hidden dependent fields
+        if (f.dependsOn && fieldValues[f.dependsOn.key] !== f.dependsOn.value) return;
+        out.push(f.key + "=" + val);
+      }
+    });
+    return out;
+  }
+
   // Copy button
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".copy-btn");
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
     if (!btn) return;
-    const block = btn.closest(".output-block").querySelector(".output-text");
-    const text = block.textContent.replace(/^# .+$/gm, "").replace(/\n{2,}/g, "\n").trim();
-    navigator.clipboard.writeText(text).then(() => {
+    var block = btn.closest(".output-block").querySelector(".output-text");
+    var text = block.textContent.replace(/^# .+$/gm, "").replace(/\n{2,}/g, "\n").trim();
+    navigator.clipboard.writeText(text).then(function () {
       btn.textContent = "Copied!";
       btn.classList.add("copied");
-      setTimeout(() => {
+      setTimeout(function () {
         btn.textContent = "Copy";
         btn.classList.remove("copied");
       }, 2000);
@@ -441,8 +553,12 @@
 
   // --- Utilities ---
 
+  function findStep(id) {
+    return varsData.steps.find(function (s) { return s.id === id; });
+  }
+
   function esc(str) {
-    const div = document.createElement("div");
+    var div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
   }

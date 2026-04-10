@@ -3,7 +3,7 @@
     {
       "id": "provider",
       "title": "LLM Provider",
-      "subtitle": "Which AI provider will power your agent?",
+      "subtitle": "Which AI provider will power your agent? Pick one or more.",
       "fields": [
         {
           "key": "OPENROUTER_API_KEY",
@@ -118,7 +118,7 @@
           "key": "CLOUDFLARE_API_KEY",
           "label": "Cloudflare AI API Key",
           "type": "password",
-          "description": "Cloudflare AI models.",
+          "description": "Cloudflare Workers AI models.",
           "required": false,
           "group": "cloudflare"
         },
@@ -126,9 +126,34 @@
           "key": "ZAI_API_KEY",
           "label": "Z.AI API Key",
           "type": "password",
-          "description": "Z.AI models.",
+          "description": "GLM models from Z.AI.",
           "required": false,
           "group": "zai"
+        },
+        {
+          "key": "MINIMAX_API_KEY",
+          "label": "MiniMax API Key",
+          "type": "password",
+          "description": "Direct API access to MiniMax models (pay-per-use).",
+          "required": false,
+          "group": "minimax"
+        },
+        {
+          "key": "MINIMAX_CODE_PLAN_KEY",
+          "label": "MiniMax Code Plan Key",
+          "type": "password",
+          "description": "Subscription plan key for MiniMax. Works as API key but billed through your plan.",
+          "placeholder": "sk-cp-...",
+          "required": false,
+          "group": "minimax"
+        },
+        {
+          "key": "VERCEL_GATEWAY_API_KEY",
+          "label": "Vercel AI Gateway Key",
+          "type": "password",
+          "description": "Route through Vercel's AI Gateway.",
+          "required": false,
+          "group": "vercel"
         },
         {
           "key": "LLM_API_KEY",
@@ -191,7 +216,11 @@
             "kimi": "kimi/kimi-k2.5",
             "moonshot": "moonshot/moonshot-v1-auto",
             "venice": "venice/llama-3.3-70b",
-            "zai": "zai/zai-ds-r1"
+            "cloudflare": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "zai": "zai/glm-5.1",
+            "minimax": "minimax/MiniMax-M2.7",
+            "vercel": "openai/gpt-4o",
+            "aws": "aws/anthropic.claude-sonnet-4-20250514-v1:0"
           }
         },
         {
@@ -256,6 +285,21 @@
           "link": "https://t.me/userinfobot"
         },
         {
+          "key": "STREAMING_MODE",
+          "label": "Telegram Streaming",
+          "type": "select",
+          "description": "How the bot sends responses in Telegram. Off avoids message flashing.",
+          "required": false,
+          "group": "telegram",
+          "default": "off",
+          "options": [
+            { "value": "off", "label": "Off — single message when done" },
+            { "value": "progress", "label": "Progress — shows tool steps in real-time" },
+            { "value": "partial", "label": "Partial — live draft preview (can flash)" },
+            { "value": "block", "label": "Block — sends in chunks as paragraphs" }
+          ]
+        },
+        {
           "key": "DISCORD_BOT_TOKEN",
           "label": "Discord Bot Token",
           "type": "password",
@@ -315,7 +359,7 @@
           "default": "0",
           "required": false,
           "options": [
-            { "value": "0", "label": "Tier 0 — Personal Assistant", "description": "Web, memory, read/write, cron. Safe default." },
+            { "value": "0", "label": "Tier 0 — Personal Assistant", "description": "Web, memory, read/write, cron. Safe default.", "badge": "Most users start here" },
             { "value": "1", "label": "Tier 1 — Capable Agent", "description": "+ curated shell (find, git, wc, sort, uniq)" },
             { "value": "2", "label": "Tier 2 — Power User", "description": "+ full shell, remote browser, sub-agents" },
             { "value": "3", "label": "Tier 3 — Operator", "description": "Applies Tier 2, guides you to SSH for the rest" }
@@ -324,9 +368,9 @@
       ]
     },
     {
-      "id": "extras",
-      "title": "Optional Extras",
-      "subtitle": "Fine-tune your setup. All optional — skip if unsure.",
+      "id": "identity",
+      "title": "Agent Identity",
+      "subtitle": "Give your agent a name and timezone.",
       "fields": [
         {
           "key": "AGENT_NAME",
@@ -344,12 +388,19 @@
           "placeholder": "America/New_York",
           "default": "UTC",
           "required": false
-        },
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Web Search",
+      "subtitle": "Let your agent search the web.",
+      "fields": [
         {
           "key": "BRAVE_API_KEY",
           "label": "Brave Search API Key",
           "type": "password",
-          "description": "Enables the web_search tool. Without this, web search calls will fail.",
+          "description": "Enables the web_search tool. Without this, web search calls will fail at runtime.",
           "required": false,
           "link": "https://brave.com/search/api/"
         },
@@ -364,15 +415,28 @@
             { "value": "standard", "label": "Standard" },
             { "value": "llm-context", "label": "LLM Context — grounded snippets with source metadata" }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "advanced",
+      "title": "Advanced",
+      "subtitle": "Embeddings, voice, monitoring, custom binaries. Skip if unsure.",
+      "fields": [
         {
           "key": "LLM_EMBEDDING_MODEL",
           "label": "Embedding Model",
           "type": "text",
-          "description": "Override the default embedding model for semantic memory.",
+          "description": "Override the default embedding model for semantic memory. Auto-configured for most providers.",
           "placeholder": "openai/text-embedding-3-small",
-          "required": false,
-          "advanced": true
+          "required": false
+        },
+        {
+          "key": "DEEPGRAM_API_KEY",
+          "label": "Deepgram API Key",
+          "type": "password",
+          "description": "Dedicated voice transcription. Only needed if your LLM provider doesn't support audio.",
+          "required": false
         },
         {
           "key": "LLM_HEARTBEAT_LIGHT_CONTEXT",
@@ -380,27 +444,17 @@
           "type": "select",
           "description": "Skip injecting bootstrap files during heartbeat/cron turns to save tokens.",
           "required": false,
-          "advanced": true,
           "options": [
             { "value": "false", "label": "Off — full context on every turn" },
             { "value": "true", "label": "On — lightweight heartbeats" }
           ]
         },
         {
-          "key": "DEEPGRAM_API_KEY",
-          "label": "Deepgram API Key",
-          "type": "password",
-          "description": "Dedicated voice transcription provider. Only needed if your LLM provider doesn't support audio.",
-          "required": false,
-          "advanced": true
-        },
-        {
           "key": "GATEWAY_TOKEN",
           "label": "Gateway Token",
           "type": "password",
           "description": "Authentication token for the gateway. Auto-generated if not set.",
-          "required": false,
-          "advanced": true
+          "required": false
         },
         {
           "key": "EXEC_EXTRA_COMMANDS",
@@ -408,8 +462,7 @@
           "type": "text",
           "description": "Comma-separated binary names in /data/bin/ to add to exec allowlist (Tier 0-1 only).",
           "placeholder": "core-edge,my-tool",
-          "required": false,
-          "advanced": true
+          "required": false
         },
         {
           "key": "EXTRA_ENV_KEYS",
@@ -417,8 +470,7 @@
           "type": "text",
           "description": "Comma-separated env var names to pass through to the gateway process.",
           "placeholder": "CORE_URL,CORE_API_KEY",
-          "required": false,
-          "advanced": true
+          "required": false
         },
         {
           "key": "TOOL_OBSERVER_ENABLED",
@@ -426,7 +478,6 @@
           "type": "select",
           "description": "Send tool call events to a Telegram topic or Discord thread for monitoring.",
           "required": false,
-          "advanced": true,
           "options": [
             { "value": "false", "label": "Off" },
             { "value": "true", "label": "On" }
@@ -438,7 +489,6 @@
           "type": "text",
           "description": "Chat/channel ID to send observer events to. Defaults to owner ID.",
           "required": false,
-          "advanced": true,
           "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" }
         },
         {
@@ -447,7 +497,6 @@
           "type": "text",
           "description": "Telegram topic or Discord thread ID for observer events.",
           "required": false,
-          "advanced": true,
           "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" }
         },
         {
@@ -457,7 +506,6 @@
           "description": "How much detail to include in observer events.",
           "required": false,
           "default": "normal",
-          "advanced": true,
           "dependsOn": { "key": "TOOL_OBSERVER_ENABLED", "value": "true" },
           "options": [
             { "value": "minimal", "label": "Minimal — tool name only" },

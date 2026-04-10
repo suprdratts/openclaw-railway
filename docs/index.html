@@ -12,22 +12,35 @@
 
 <div class="header">
   <h1>OpenClaw Railway Setup</h1>
-  <p>Configure your hardened AI agent in under 3 minutes.</p>
+  <p>Configure your hardened AI agent for Railway.</p>
 </div>
 
-<div class="progress-bar">
-  <div class="progress-dot active"></div>
-  <div class="progress-dot"></div>
-  <div class="progress-dot"></div>
-  <div class="progress-dot"></div>
-  <div class="progress-dot"></div>
-  <div class="progress-dot"></div>
+<!-- Mode selector (shown first, before wizard) -->
+<div class="mode-selector" id="mode-selector">
+  <div class="mode-header">
+    <h2>How much do you want to configure?</h2>
+  </div>
+  <div class="mode-grid">
+    <div class="mode-card" data-mode="quick">
+      <div class="mode-title">Quick Start</div>
+      <div class="mode-desc">Provider, model, and channel. Get running in under 2 minutes.</div>
+      <div class="mode-steps">3 steps</div>
+    </div>
+    <div class="mode-card" data-mode="full">
+      <div class="mode-title">Full Setup</div>
+      <div class="mode-desc">Everything — security tier, agent name, web search, monitoring, and more.</div>
+      <div class="mode-steps">7 steps</div>
+    </div>
+  </div>
 </div>
 
-<div class="wizard">
+<!-- Progress bar (hidden until mode selected) -->
+<div class="progress-bar" id="progress-bar" style="display:none"></div>
 
-  <!-- Step 0: Provider -->
-  <div class="step active" data-step="0">
+<div class="wizard" id="wizard" style="display:none">
+
+  <!-- Step: Provider -->
+  <div class="step" data-step-id="provider">
     <div class="step-header">
       <h2>LLM Provider</h2>
       <p>Which AI provider will power your agent? Pick one or more.</p>
@@ -35,27 +48,30 @@
     <div class="provider-grid"></div>
     <div id="provider-fields"></div>
     <div class="nav">
-      <div></div>
+      <button class="btn btn-back">Back</button>
       <button class="btn btn-next" disabled>Next</button>
     </div>
   </div>
 
-  <!-- Step 1: Model -->
-  <div class="step" data-step="1">
+  <!-- Step: Model -->
+  <div class="step" data-step-id="model">
     <div class="step-header">
       <h2>Model Selection</h2>
       <p>Which model should your agent use?</p>
     </div>
     <div id="model-fields"></div>
     <div class="model-hint" style="display:none"></div>
+    <div class="model-autofill" style="display:none">
+      <button class="btn btn-autofill" type="button"></button>
+    </div>
     <div class="nav">
       <button class="btn btn-back">Back</button>
       <button class="btn btn-next" disabled>Next</button>
     </div>
   </div>
 
-  <!-- Step 2: Channel -->
-  <div class="step" data-step="2">
+  <!-- Step: Channel -->
+  <div class="step" data-step-id="channel">
     <div class="step-header">
       <h2>Chat Channel</h2>
       <p>How will you talk to your agent? Pick one or more.</p>
@@ -68,11 +84,11 @@
     </div>
   </div>
 
-  <!-- Step 3: Security -->
-  <div class="step" data-step="3">
+  <!-- Step: Security -->
+  <div class="step" data-step-id="security">
     <div class="step-header">
       <h2>Security Tier</h2>
-      <p>How much power should your agent have?</p>
+      <p>How much power should your agent have? You can change this later with a redeploy.</p>
     </div>
     <div class="tier-list"></div>
     <div class="nav">
@@ -81,21 +97,47 @@
     </div>
   </div>
 
-  <!-- Step 4: Extras -->
-  <div class="step" data-step="4">
+  <!-- Step: Identity -->
+  <div class="step" data-step-id="identity">
     <div class="step-header">
-      <h2>Optional Extras</h2>
-      <p>Fine-tune your setup. Everything here is optional.</p>
+      <h2>Agent Identity</h2>
+      <p>Give your agent a name and timezone. Both optional.</p>
     </div>
-    <div id="extras-fields"></div>
+    <div id="identity-fields"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next">Next</button>
+    </div>
+  </div>
+
+  <!-- Step: Search -->
+  <div class="step" data-step-id="search">
+    <div class="step-header">
+      <h2>Web Search</h2>
+      <p>Let your agent search the web. Requires a free Brave Search API key.</p>
+    </div>
+    <div id="search-fields"></div>
+    <div class="nav">
+      <button class="btn btn-back">Back</button>
+      <button class="btn btn-next">Next</button>
+    </div>
+  </div>
+
+  <!-- Step: Advanced -->
+  <div class="step" data-step-id="advanced">
+    <div class="step-header">
+      <h2>Advanced</h2>
+      <p>Embeddings, voice, monitoring, custom binaries. Skip anything you're unsure about.</p>
+    </div>
+    <div id="advanced-fields"></div>
     <div class="nav">
       <button class="btn btn-back">Back</button>
       <button class="btn btn-next">Generate Config</button>
     </div>
   </div>
 
-  <!-- Step 5: Output -->
-  <div class="step" data-step="5">
+  <!-- Step: Output -->
+  <div class="step" data-step-id="output">
     <div class="step-header">
       <h2>Your Configuration</h2>
       <p>Copy these into Railway's environment variables.</p>
@@ -124,18 +166,18 @@
 
     <div class="nav">
       <button class="btn btn-back">Back</button>
-      <div></div>
+      <button class="btn btn-restart">Start Over</button>
     </div>
   </div>
 
 </div>
 
 <div class="footer">
-  <a href="https://github.com/Slayga/openclaw-railway">GitHub</a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://github.com/Slayga/openclaw-railway/blob/main/config/environment.md">Full env var reference</a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://github.com/Slayga/openclaw-railway/blob/main/docs/SETUP.md">Setup guide</a>
+  <a href="https://github.com/Mattslayga/openclaw-railway">GitHub</a>
+  &middot;
+  <a href="https://github.com/Mattslayga/openclaw-railway/blob/main/config/environment.md">Full env var reference</a>
+  &middot;
+  <a href="https://github.com/Mattslayga/openclaw-railway/blob/main/docs/SETUP.md">Setup guide</a>
 </div>
 
 <script src="wizard.js"></script>

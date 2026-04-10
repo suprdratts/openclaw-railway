@@ -8,7 +8,7 @@
 
 [OpenClaw](https://openclaw.ai) is an open-source AI assistant platform that connects to your chat apps and runs 24/7. This template deploys it to [Railway](https://railway.com?referralCode=slayga) (a container hosting platform) with security hardening — configure entirely via environment variables, no SSH required.
 
-**New here?** Use the [Setup Wizard](https://slayga.github.io/openclaw-railway/) to generate your config in under 3 minutes.
+**New here?** Use the [Setup Wizard](https://mattslayga.github.io/openclaw-railway/) to generate your config in under 3 minutes.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/openclaw-railway?referralCode=slayga&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
