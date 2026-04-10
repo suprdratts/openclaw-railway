@@ -58,6 +58,8 @@ const LLM_PROVIDERS = [
   'MISTRAL_API_KEY',
   'VENICE_API_KEY',
   'CLOUDFLARE_API_KEY',
+  'STEPFUN_API_KEY',
+  'ARCEEAI_API_KEY',
   // AWS Bedrock (needs region too)
   'AWS_ACCESS_KEY_ID',
   'AWS_SECRET_ACCESS_KEY',

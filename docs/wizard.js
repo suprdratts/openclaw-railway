@@ -22,6 +22,8 @@
     { id: "cloudflare", name: "Cloudflare", tag: "", keys: ["CLOUDFLARE_API_KEY"] },
     { id: "zai", name: "Z.AI", tag: "GLM", keys: ["ZAI_API_KEY"] },
     { id: "minimax", name: "MiniMax", tag: "API + Plan", keys: ["MINIMAX_API_KEY", "MINIMAX_CODE_PLAN_KEY"] },
+    { id: "stepfun", name: "StepFun", tag: "", keys: ["STEPFUN_API_KEY"] },
+    { id: "arcee", name: "Arcee AI", tag: "Trinity", keys: ["ARCEEAI_API_KEY"] },
     { id: "vercel", name: "Vercel AI", tag: "Gateway", keys: ["VERCEL_GATEWAY_API_KEY"] },
     { id: "aws", name: "AWS Bedrock", tag: "3 keys", keys: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"] },
   ];

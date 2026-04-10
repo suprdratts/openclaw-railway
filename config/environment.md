@@ -33,6 +33,8 @@ If you prefer to use a provider directly (or need voice transcription), set thei
 | `ZAI_API_KEY` | Z.AI | |
 | `KIMI_API_KEY` | Kimi Coding | |
 | `MOONSHOT_API_KEY` | Moonshot AI (Kimi) | |
+| `STEPFUN_API_KEY` | StepFun | |
+| `ARCEEAI_API_KEY` | Arcee AI (Trinity) | |
 
 ### Providers That Need Custom Config (Tier 2+)
 

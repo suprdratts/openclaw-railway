@@ -131,6 +131,22 @@
           "group": "zai"
         },
         {
+          "key": "STEPFUN_API_KEY",
+          "label": "StepFun API Key",
+          "type": "password",
+          "description": "StepFun models.",
+          "required": false,
+          "group": "stepfun"
+        },
+        {
+          "key": "ARCEEAI_API_KEY",
+          "label": "Arcee AI API Key",
+          "type": "password",
+          "description": "Arcee Trinity models.",
+          "required": false,
+          "group": "arcee"
+        },
+        {
           "key": "MINIMAX_API_KEY",
           "label": "MiniMax API Key",
           "type": "password",
@@ -219,6 +235,8 @@
             "cloudflare": "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
             "zai": "zai/glm-5.1",
             "minimax": "minimax/MiniMax-M2.7",
+            "stepfun": "stepfun/step-2-16k",
+            "arcee": "arcee/trinity-medium",
             "vercel": "openai/gpt-4o",
             "aws": "aws/anthropic.claude-sonnet-4-20250514-v1:0"
           }

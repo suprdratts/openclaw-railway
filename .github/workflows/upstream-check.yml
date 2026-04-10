@@ -152,29 +152,32 @@ jobs:
             -e SECURITY_TIER=0 \
             openclaw-test
 
-          # Wait for startup (entrypoint builds config + starts gateway + health server)
+          # Poll for health check (entrypoint builds config + starts gateway + health server)
+          # Previous fixed sleep of 15s was insufficient — entrypoint can take 30s+ in CI
           echo "Waiting for container startup..."
-          sleep 15
-
-          # Check if container is still running (didn't crash)
-          if docker ps --filter "name=openclaw-gateway-test" --format '{{.Names}}' | grep -q openclaw-gateway-test; then
-            echo "Container still running: good"
-
-            # Check health endpoint
-            HEALTH=$(docker exec openclaw-gateway-test curl -sf http://localhost:8080/healthz 2>/dev/null || echo "FAILED")
-            echo "Health check: $HEALTH"
-
-            # Grab startup logs for analysis
-            docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log
-
-            if [ "$HEALTH" = "OK" ]; then
-              echo "success=true" >> $GITHUB_OUTPUT
-            else
+          HEALTH="FAILED"
+          for i in $(seq 1 12); do
+            sleep 5
+            # Check if container is still running
+            if ! docker ps --filter "name=openclaw-gateway-test" --format '{{.Names}}' | grep -q openclaw-gateway-test; then
+              echo "Container exited early (attempt $i)"
+              docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log || true
               echo "success=false" >> $GITHUB_OUTPUT
+              break
             fi
+            HEALTH=$(docker exec openclaw-gateway-test curl -sf http://localhost:8080/healthz 2>/dev/null || echo "FAILED")
+            echo "Health check attempt $i: $HEALTH"
+            if [ "$HEALTH" = "OK" ]; then
+              break
+            fi
+          done
+
+          # Grab startup logs for analysis
+          docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log
+
+          if [ "$HEALTH" = "OK" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
           else
-            echo "Container exited early"
-            docker logs openclaw-gateway-test 2>&1 | tee /tmp/gateway.log || true
             echo "success=false" >> $GITHUB_OUTPUT
           fi
 
