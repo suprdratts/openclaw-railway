@@ -76,6 +76,28 @@ echo "[entrypoint] Skills copied to workspace ($(ls /data/workspace/skills/ | wc
 echo "[entrypoint] Data directories ready"
 
 # -----------------------------------------------------------------------------
+# 1b. Linear CLI multi-workspace credentials
+#     Write credentials.toml so the linear binary can use -w flag to switch
+#     workspaces. LINEAR_API_KEY env var locks the CLI to a single workspace
+#     and rejects -w, so we use the credentials file instead.
+#     XDG_CONFIG_HOME is passed through EXTRA_ENV_KEYS.
+# -----------------------------------------------------------------------------
+if [ -n "${LINEAR_API_KEY:-}" ]; then
+  LINEAR_CONFIG_DIR="${XDG_CONFIG_HOME:-/data/.config}/linear"
+  mkdir -p "$LINEAR_CONFIG_DIR"
+  {
+    echo 'default = "slaytek-systems"'
+    echo "slaytek-systems = \"$LINEAR_API_KEY\""
+    [ -n "${MOTUS_LINEAR_API_KEY:-}" ] && echo "motuscapital = \"$MOTUS_LINEAR_API_KEY\""
+  } > "$LINEAR_CONFIG_DIR/credentials.toml"
+  chmod 600 "$LINEAR_CONFIG_DIR/credentials.toml"
+  chown -R openclaw:openclaw "${XDG_CONFIG_HOME:-/data/.config}"
+  WORKSPACE_COUNT=1
+  [ -n "${MOTUS_LINEAR_API_KEY:-}" ] && WORKSPACE_COUNT=2
+  echo "[entrypoint] Linear credentials: ${WORKSPACE_COUNT} workspace(s) configured"
+fi
+
+# -----------------------------------------------------------------------------
 # 2. Copy workspace templates (only files that don't already exist)
 # -----------------------------------------------------------------------------
 if [ -d "/app/workspace-templates" ]; then
