@@ -438,7 +438,7 @@ if [ -f "$CONFIG_FILE" ]; then
   # needs to write to these at runtime (devices, cron, sessions, canvas, etc).
   # We create them before locking the parent dir so the gateway doesn't need
   # mkdir permission on /data/.openclaw itself.
-  GATEWAY_DIRS="agents canvas cron devices identity sessions"
+  GATEWAY_DIRS="agents canvas cron devices identity sessions tasks logs"
   for dir in $GATEWAY_DIRS; do
     mkdir -p "/data/.openclaw/$dir"
     chown openclaw:openclaw "/data/.openclaw/$dir"
@@ -483,27 +483,27 @@ install -m 600 /dev/null "$SECRETS_ENV_FILE"
 # Dynamic provider keys — extract from OpenClaw's own provider-env-vars module.
 # This auto-discovers all API keys, tokens, and plan keys that OpenClaw recognises,
 # so new providers added upstream are passed through without entrypoint changes.
-OPENCLAW_PROVIDER_ENV_FILE=$(find /usr/local/lib/node_modules/openclaw/dist/ -maxdepth 1 -name 'provider-env-vars-*.js' -print -quit 2>/dev/null)
-if [ -n "$OPENCLAW_PROVIDER_ENV_FILE" ]; then
-  DYNAMIC_KEYS=$(grep -oE '[A-Z][A-Z0-9_]*_(API_KEY|TOKEN|OAUTH_TOKEN|KEY|PLAN_KEY)' "$OPENCLAW_PROVIDER_ENV_FILE" | sort -u)
-  for key in $DYNAMIC_KEYS; do
-    val="$(eval echo "\${${key}:-}")"
-    [ -n "$val" ] && printf '%s=%s\n' "$key" "$val" >> "$SECRETS_ENV_FILE"
-  done
-  echo "[entrypoint] Provider keys: extracted $(echo "$DYNAMIC_KEYS" | wc -w | xargs) known vars from OpenClaw"
-else
-  echo "[entrypoint] WARNING: Could not find provider-env-vars module, falling back to static list"
-  for key in ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY GROQ_API_KEY \
-             TOGETHER_API_KEY DEEPSEEK_API_KEY XAI_API_KEY MISTRAL_API_KEY \
-             MINIMAX_API_KEY MINIMAX_CODE_PLAN_KEY KIMI_API_KEY MOONSHOT_API_KEY \
-             VENICE_API_KEY DEEPGRAM_API_KEY GEMINI_API_KEY GOOGLE_API_KEY; do
-    val="$(eval echo "\${${key}:-}")"
-    [ -n "$val" ] && printf '%s=%s\n' "$key" "$val" >> "$SECRETS_ENV_FILE"
-  done
-fi
+# Provider API keys — use a static list. v2026.4.9+ loads most provider env vars
+# from plugin manifests at runtime, so grepping dist/ files is unreliable.
+# This list covers all providers OpenClaw supports. Duplicates with the
+# template-specific section below are harmless (printf won't double-write
+# because we dedup at the end).
+for key in ANTHROPIC_API_KEY OPENAI_API_KEY GROQ_API_KEY \
+           TOGETHER_API_KEY DEEPSEEK_API_KEY XAI_API_KEY MISTRAL_API_KEY \
+           MINIMAX_API_KEY MINIMAX_CODE_PLAN_KEY MINIMAX_CODING_API_KEY \
+           KIMI_API_KEY MOONSHOT_API_KEY \
+           VENICE_API_KEY DEEPGRAM_API_KEY GEMINI_API_KEY GOOGLE_API_KEY \
+           STEPFUN_API_KEY ARCEEAI_API_KEY CEREBRAS_API_KEY DASHSCOPE_API_KEY \
+           VOYAGE_API_KEY; do
+  val="$(eval echo "\${${key}:-}")"
+  [ -n "$val" ] && printf '%s=%s\n' "$key" "$val" >> "$SECRETS_ENV_FILE"
+done
 
-# Template-specific keys not in OpenClaw's provider list
-for key in GOOGLE_AI_API_KEY LLM_API_KEY VERCEL_GATEWAY_API_KEY \
+# Router/template-specific keys not in OpenClaw's provider list.
+# OPENROUTER_API_KEY is always here — OpenRouter is a router, not a native
+# provider, so it never appears in provider-env-vars.
+for key in OPENROUTER_API_KEY BRAVE_API_KEY \
+           GOOGLE_AI_API_KEY LLM_API_KEY VERCEL_GATEWAY_API_KEY \
            FIREWORKS_API_KEY CLOUDFLARE_API_KEY \
            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION; do
   val="$(eval echo "\${${key}:-}")"
