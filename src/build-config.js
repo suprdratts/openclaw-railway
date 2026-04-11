@@ -605,10 +605,22 @@ function main() {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), { mode: 0o600 });
 
   // Debug: print full config structure
-  // SecretRef fields show as { source: "env", provider: "default", id: "KEY_NAME" }
-  // which is safe to log (it's a reference, not the secret itself).
-  // Only the gateway auth token needs redaction when it's a literal (random UUID).
+  // SecretRef fields ({ source: "env", id: "KEY_NAME" }) are references not
+  // values, but the env var names themselves reveal which secrets are
+  // configured — a metadata leak in Railway deploy logs. Redact to "[SECRET]".
+  // The literal gateway token (random UUID when env var unset) is also redacted.
   const debugConfig = JSON.parse(JSON.stringify(config));
+  function redactSecretRefs(obj) {
+    if (obj === null || typeof obj !== 'object') return;
+    if (obj.source === 'env' && typeof obj.id === 'string') {
+      // Mutate in place: replace the SecretRef object with a marker string
+      for (const k of Object.keys(obj)) delete obj[k];
+      obj.redacted = '[SECRET]';
+      return;
+    }
+    for (const v of Object.values(obj)) redactSecretRefs(v);
+  }
+  redactSecretRefs(debugConfig);
   if (debugConfig.gateway?.auth?.token && typeof debugConfig.gateway.auth.token === 'string') {
     debugConfig.gateway.auth.token = '[REDACTED-RANDOM]';
   }
