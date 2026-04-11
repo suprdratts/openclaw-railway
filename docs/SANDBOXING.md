@@ -248,7 +248,7 @@ The entrypoint hardens file ownership as a backup layer:
 
 The gateway blocks `web_fetch` requests to private/internal hostnames, loopback addresses, and IPv4-mapped IPv6 literals. This is enforced at the gateway level — no configuration needed.
 
-**Not yet available:** URL/domain allowlists for `web_fetch`/`web_search`. A PR was attempted (PR #18584) but reverted in v2026.2.17. Data exfiltration via `web_fetch` GET parameters to external URLs remains possible — mitigated by behavioral templates that instruct the agent to refuse exfiltration requests.
+**No URL allowlist (accepted residual risk):** Neither upstream nor this template provides a domain allowlist for `web_fetch`/`web_search`. Upstream attempted it twice (PRs #18584 and #19042, both abandoned). Data exfiltration via `web_fetch` GET parameters to external URLs remains possible — mitigated by `workspaceOnly` (restricts what can be read), `web_fetch` being GET-only (limits payload size), and behavioral templates (instruct refusal). See [SECURITY.md](SECURITY.md#accepted-residual-risk-web_fetch-exfiltration) for the full rationale and when this template is not appropriate.
 
 ### Exec Allowlist (exec-approvals.json)
 

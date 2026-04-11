@@ -158,7 +158,7 @@ Railway's container provides hard boundaries:
 |------|------------|
 | Prompt injection | Tool policy limits blast radius |
 | API key theft | `workspaceOnly` blocks reads outside workspace; config write-locked; `env -i` on gateway process |
-| Data exfiltration via `web_fetch` | `web_fetch` is GET-only (limits payload size); no URL allowlist exists yet (PR #18584 reverted) |
+| Data exfiltration via `web_fetch` | `web_fetch` is GET-only (limits payload size to URL parameters); `workspaceOnly` restricts what can be read; behavioral templates instruct refusal of exfil requests. **No URL allowlist** — accepted residual risk, see below |
 | Data exfiltration via `exec` | Exec allowlist at Tiers 0-1; `env -i` prevents env var leaks; OC-09 fix blocks `$VAR` injection |
 | Resource exhaustion | Railway's resource limits apply |
 
@@ -176,7 +176,23 @@ OpenClaw v2026.2.12 through v2026.2.17 included several security fixes that stre
 | **High-risk tools via HTTP** | v2026.2.13 | `sessions_spawn` etc. blocked from `/tools/invoke` HTTP endpoint |
 | **`apply_patch` traversal** | v2026.2.14 | Enforces workspace-root path bounds |
 
-**Not yet available:** URL allowlists for `web_fetch`/`web_search` (PR #18584 was reverted). Data exfiltration via `web_fetch` GET parameters remains an open vector — mitigated by behavioral templates.
+### Accepted residual risk: `web_fetch` exfiltration
+
+This template does not enforce a URL/domain allowlist on `web_fetch` or `web_search`. A prompt-injected agent can be induced to send workspace contents (notes, memory files, conversation history) to an attacker-controlled URL via GET parameters.
+
+**Upstream status:** Two attempts have been made and abandoned — PR #18584 was merged then reverted in v2026.2.17, and PR #19042 was closed stale on 2026-04-03. No further attempts are tracked upstream.
+
+**Why this template does not provide its own allowlist:**
+
+- `workspaceOnly` is the load-bearing defense — the agent cannot read secrets, config files, `/proc/self/environ`, or anything outside `/data/workspace/`. What remains exfiltratable is limited to the user's own workspace content.
+- `web_fetch` is GET-only, capping payload size per request to what fits in URL parameters.
+- Behavioral templates in `AGENTS.md` instruct the agent to refuse suspicious URL-sending requests (reliability depends on model compliance).
+- Building a URL allowlist ourselves (via proxy sidecar or upstream fork) is fragile ongoing work with a small marginal benefit against the threats this template is designed for.
+
+**What this means for you:**
+
+- If your workspace holds only your own notes and chat history, this is a reasonable residual risk. Behavioural guardrails plus `workspaceOnly` are your defense.
+- **If your deployment handles third-party data** (e.g. customer messages, shared documents, anything under compliance obligations), the exfiltration surface is material — either wait for upstream to land an allowlist, run behind an egress-filtered proxy, or don't use this template.
 
 ### Defense-in-Depth Summary
 

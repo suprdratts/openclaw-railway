@@ -290,7 +290,7 @@ jobs:
 
           - [ ] Read [changelog / release notes](https://github.com/openclaw/openclaw/releases) for breaking changes
           - [ ] Security advisories (check for OC-XX format CVEs)
-          - [ ] Check if new config fields need env var exposure (e.g. `tools.web.urlAllowlist`)
+          - [ ] Check if new config fields need env var exposure
 
           ## Action
 

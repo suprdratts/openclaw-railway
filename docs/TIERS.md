@@ -403,7 +403,7 @@ Delete the volume in Railway dashboard and redeploy. This wipes everything — c
 **Tier 0 (web access):**
 - The agent can read any public web page. It cannot log into services or access private content.
 - `web_fetch` blocks private/internal hostnames (SSRF hardening, v2026.2.12+). External URLs are unrestricted.
-- No URL/domain allowlist exists yet — `web_fetch` can reach any public URL. Behavioral templates defend against exfiltration attempts.
+- No URL/domain allowlist — `web_fetch` can reach any public URL (accepted residual risk, see [SECURITY.md](SECURITY.md#accepted-residual-risk-web_fetch-exfiltration)). `workspaceOnly` limits what can be read; behavioral templates defend against exfiltration attempts.
 - Be cautious about asking it to visit URLs from untrusted sources — web content can contain prompt injection attempts.
 - `web_fetch` is GET-only, limiting exfiltration payload size to URL parameters.
 
