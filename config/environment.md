@@ -121,6 +121,7 @@ See [PROVIDERS.md](../docs/PROVIDERS.md) for more details.
 |----------|-------------|
 | `DISCORD_GUILD_ID` | Server ID to allow. Enables `groupPolicy: "allowlist"` for this guild. Enable Developer Mode, right-click the server icon, Copy Server ID |
 | `DISCORD_GUILD_CHANNELS` | Optional — comma-separated channel IDs within the guild to allow. If unset, all channels in the guild are reachable |
+| `DISCORD_MENTION_NOT_REQUIRED_CHANNELS` | Optional — comma-separated channel IDs where the bot responds to every message without needing an `@mention`. By default (when `DISCORD_GUILD_ID` is set), the guild requires `@mention` for all channels; list IDs here to opt individual channels out. Listed IDs are also auto-added to the channel allowlist |
 | `DISCORD_THREAD_BINDINGS` | Set to `1` to enable thread-bound sessions. Each thread gets its own isolated agent session; supports `/focus`, `/unfocus`, `/agents`, and `sessions_spawn({ thread: true })` |
 | `DISCORD_THREAD_IDLE_HOURS` | Optional — auto-unfocus a thread after N idle hours. Default: `24`. Requires `DISCORD_THREAD_BINDINGS=1` |
 | `DISCORD_EXEC_APPROVALS` | Set to `1` to route exec approval prompts to the owner via DM. Requires `DISCORD_OWNER_ID` |

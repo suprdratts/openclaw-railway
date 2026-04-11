@@ -383,6 +383,16 @@ function buildConfig() {
       config.channels.discord.guilds = config.channels.discord.guilds || {};
       const guild = config.channels.discord.guilds[guildId] = config.channels.discord.guilds[guildId] || {};
 
+      // Guild-level default: require @mention. Mirrors the Telegram
+      // `groups['*'].requireMention` pattern — fleet channels shared with
+      // humans stay quiet unless the bot is mentioned. Individual channels
+      // (typically 1:1 agent channels) can opt out via
+      // DISCORD_MENTION_NOT_REQUIRED_CHANNELS below. Precedence in the
+      // gateway resolver: channel override > guild default > built-in `true`.
+      if (guild.requireMention === undefined) {
+        guild.requireMention = true;
+      }
+
       // Owner must be in guild.users to talk to the bot in guild channels
       // (DM allowlist doesn't cover guild chat).
       if (process.env.DISCORD_OWNER_ID) {
@@ -405,7 +415,28 @@ function buildConfig() {
         }
       }
 
-      console.log(`[build-config] Discord: guild mode enabled for ${guildId}${process.env.DISCORD_GUILD_CHANNELS ? ` (${process.env.DISCORD_GUILD_CHANNELS.split(',').length} channel(s))` : ' (all channels)'}`);
+      // Per-channel mention opt-out. Listed channels get `requireMention: false`
+      // so the bot responds to every message (1:1 agent channels). Channels
+      // not in this list inherit the guild default (`true`). IDs here are
+      // auto-added to the channel allowlist so you don't have to repeat them
+      // in DISCORD_GUILD_CHANNELS — keeps the two vars from having to agree.
+      if (process.env.DISCORD_MENTION_NOT_REQUIRED_CHANNELS) {
+        const mentionlessIds = process.env.DISCORD_MENTION_NOT_REQUIRED_CHANNELS
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+        guild.channels = guild.channels || {};
+        for (const channelId of mentionlessIds) {
+          const entry = guild.channels[channelId] = guild.channels[channelId] || { allow: true };
+          entry.requireMention = false;
+        }
+      }
+
+      const channelCount = guild.channels ? Object.keys(guild.channels).length : 0;
+      const mentionlessCount = guild.channels
+        ? Object.values(guild.channels).filter(c => c.requireMention === false).length
+        : 0;
+      console.log(`[build-config] Discord: guild mode enabled for ${guildId} (${channelCount > 0 ? `${channelCount} channel(s), ${mentionlessCount} mention-not-required` : 'all channels'})`);
     }
 
     // --- Thread bindings ---

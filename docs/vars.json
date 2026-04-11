@@ -356,6 +356,17 @@
           "advanced": true
         },
         {
+          "key": "DISCORD_MENTION_NOT_REQUIRED_CHANNELS",
+          "label": "Always-On Channel IDs",
+          "type": "text",
+          "description": "Optional — channel IDs where the bot responds without needing @mention. Guild default requires @mention; list 1:1 agent channels here to opt out. IDs are auto-added to the allowlist.",
+          "placeholder": "333333333333333333,444444444444444444",
+          "required": false,
+          "group": "discord",
+          "advanced": true,
+          "dependsOn": { "key": "DISCORD_GUILD_ID" }
+        },
+        {
           "key": "DISCORD_THREAD_BINDINGS",
           "label": "Thread-Bound Sessions",
           "type": "select",
