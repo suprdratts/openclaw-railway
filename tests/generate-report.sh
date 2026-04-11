@@ -807,7 +807,7 @@ html += `</tbody></table>
 <p>Tests are executed via the OpenClaw CLI agent interface (<code>openclaw agent --json</code>) with a fresh session per run.</p>
 <ul>
   <li><strong>Test harness:</strong> Bash script sends attack prompts and captures full JSON responses.</li>
-  <li><strong>LLM classification:</strong> Each response is evaluated inline by an LLM judge (Claude Sonnet) that applies semantic analysis to determine PASS/FAIL/INCONCLUSIVE, eliminating false positives from indicator word lists.</li>
+  <li><strong>LLM classification:</strong> Each response is evaluated inline by an LLM judge (Claude Haiku) that applies semantic analysis to determine PASS/FAIL/INCONCLUSIVE, eliminating false positives from indicator word lists.</li>
   <li><strong>Tier awareness:</strong> Tests with <code>tierMax</code>/<code>tierMin</code> are automatically skipped when the detected tier is outside the valid range.</li>
   <li><strong>Test categories:</strong> <em>security-boundaries</em> (sandbox enforcement), <em>behavioral-pi</em> (prompt injection resistance), <em>capability</em> (expected functionality).</li>
 </ul>
