@@ -62,7 +62,7 @@ Note: `memory_search` is auto-configured when using OpenRouter or OpenAI as your
 ```json5
 {
   tools: {
-    allow: ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec", "cron", "image"], // apply_patch is auto-allowed when exec is present
+    allow: ["read", "write", "edit", "apply_patch", "memory_get", "memory_search", "web_search", "web_fetch", "exec", "cron", "image"],
     deny: ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"],
     exec: {
       host: "gateway",
