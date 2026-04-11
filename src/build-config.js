@@ -344,8 +344,14 @@ function buildConfig() {
     // Streaming mode: off (default), partial, block, progress
     // progress shows tool execution steps in real-time without draft flashing
     if (process.env.STREAMING_MODE) {
-      config.channels.telegram.streaming = process.env.STREAMING_MODE;
-      console.log(`[build-config] Telegram streaming: ${process.env.STREAMING_MODE}`);
+      const validStreamingModes = ['off', 'partial', 'block', 'progress'];
+      const mode = process.env.STREAMING_MODE;
+      if (validStreamingModes.includes(mode)) {
+        config.channels.telegram.streaming = mode;
+        console.log(`[build-config] Telegram streaming: ${mode}`);
+      } else {
+        console.log(`[build-config] WARNING: STREAMING_MODE='${mode}' is invalid — expected one of ${validStreamingModes.join(', ')}. Falling back to default (off).`);
+      }
     }
 
     // Enable the Telegram plugin (separate from channel config)
