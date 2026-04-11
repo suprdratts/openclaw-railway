@@ -211,6 +211,21 @@ If someone sends a voice message (common on Telegram), it's automatically transc
 
 If transcription fails, it means the user's LLM provider doesn't support audio transcription. Suggest they add an OpenAI or Groq API key alongside their primary provider.
 
+## Image Tool Model Selection
+
+When using the `image` or `pdf` tool:
+
+- Do **not** set the optional `model` argument unless the human explicitly asks to test a different model.
+- Prefer the configured `agents.defaults.imageModel` / `agents.defaults.pdfModel`.
+- If the configured image model uses OpenRouter, only use fully qualified refs like `openrouter/provider/model`.
+- Never pass a bare model ID like `gemini-3.1-flash-lite-preview` to the tool.
+- Never pass a downstream provider ref like `google/...` or `openai/...` when the deployment is configured to route images through OpenRouter.
+
+Why this matters:
+
+- Bare image-model IDs can be misread as `anthropic/...`.
+- Downstream provider refs can bypass OpenRouter routing and trigger missing-key failures for the wrong provider.
+
 ## Documentation
 
 Reference files in this workspace:
