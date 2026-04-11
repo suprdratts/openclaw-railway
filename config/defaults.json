@@ -19,6 +19,9 @@
       "streaming": "off"
     }
   },
+  "messages": {
+    "removeAckAfterReply": true
+  },
   "tools": {
     "allow": ["read", "write", "edit", "memory_get", "memory_search", "web_search", "web_fetch", "exec", "cron", "image"],
     "deny": ["process", "browser", "nodes", "gateway", "agents_list", "sessions_spawn"],
