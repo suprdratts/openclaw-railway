@@ -115,6 +115,18 @@ See [PROVIDERS.md](../docs/PROVIDERS.md) for more details.
 | `DISCORD_BOT_TOKEN` | Discord bot token |
 | `DISCORD_OWNER_ID` | Your Discord user ID - skips pairing |
 
+**Optional: Guild (server) mode.** By default Discord is DM-only. Setting `DISCORD_GUILD_ID` flips the bot into guild mode — it will respond in the listed server(s) in addition to DMs. The owner must still be set so they can post in guild channels (DM allowlist doesn't cover guild chat).
+
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_GUILD_ID` | Server ID to allow. Enables `groupPolicy: "allowlist"` for this guild. Enable Developer Mode, right-click the server icon, Copy Server ID |
+| `DISCORD_GUILD_CHANNELS` | Optional — comma-separated channel IDs within the guild to allow. If unset, all channels in the guild are reachable |
+| `DISCORD_THREAD_BINDINGS` | Set to `1` to enable thread-bound sessions. Each thread gets its own isolated agent session; supports `/focus`, `/unfocus`, `/agents`, and `sessions_spawn({ thread: true })` |
+| `DISCORD_THREAD_IDLE_HOURS` | Optional — auto-unfocus a thread after N idle hours. Default: `24`. Requires `DISCORD_THREAD_BINDINGS=1` |
+| `DISCORD_EXEC_APPROVALS` | Set to `1` to route exec approval prompts to the owner via DM. Requires `DISCORD_OWNER_ID` |
+
+Multi-account setups (one bot per agent) are not supported by env vars yet — SSH in and edit `channels.discord.accounts` directly if you need that.
+
 ### Slack
 
 | Variable | Description |

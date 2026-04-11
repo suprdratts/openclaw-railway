@@ -336,6 +336,63 @@
           "group": "discord"
         },
         {
+          "key": "DISCORD_GUILD_ID",
+          "label": "Discord Server ID",
+          "type": "text",
+          "description": "Optional — flips the bot into guild mode so it responds in this server. Without this, Discord is DM-only.",
+          "placeholder": "123456789012345678",
+          "required": false,
+          "group": "discord",
+          "advanced": true
+        },
+        {
+          "key": "DISCORD_GUILD_CHANNELS",
+          "label": "Allowed Channel IDs",
+          "type": "text",
+          "description": "Optional — comma-separated channel IDs within the server. If blank, all channels in the server are reachable.",
+          "placeholder": "111111111111111111,222222222222222222",
+          "required": false,
+          "group": "discord",
+          "advanced": true
+        },
+        {
+          "key": "DISCORD_THREAD_BINDINGS",
+          "label": "Thread-Bound Sessions",
+          "type": "select",
+          "description": "Each Discord thread gets its own agent session. Supports /focus, /unfocus, /agents.",
+          "required": false,
+          "group": "discord",
+          "advanced": true,
+          "options": [
+            { "value": "", "label": "Off" },
+            { "value": "1", "label": "On" }
+          ]
+        },
+        {
+          "key": "DISCORD_THREAD_IDLE_HOURS",
+          "label": "Thread Idle Timeout (hours)",
+          "type": "text",
+          "description": "Auto-unfocus a thread after this many idle hours.",
+          "placeholder": "24",
+          "required": false,
+          "group": "discord",
+          "advanced": true,
+          "dependsOn": { "key": "DISCORD_THREAD_BINDINGS", "value": "1" }
+        },
+        {
+          "key": "DISCORD_EXEC_APPROVALS",
+          "label": "Exec Approvals via DM",
+          "type": "select",
+          "description": "Route exec approval requests to the owner via Discord DM. Requires Owner ID.",
+          "required": false,
+          "group": "discord",
+          "advanced": true,
+          "options": [
+            { "value": "", "label": "Off" },
+            { "value": "1", "label": "On" }
+          ]
+        },
+        {
           "key": "SLACK_BOT_TOKEN",
           "label": "Slack Bot Token",
           "type": "password",

@@ -370,6 +370,72 @@ function buildConfig() {
     } else {
       config.channels.discord.dmPolicy = 'pairing';
     }
+
+    // --- Guild (server) allowlist ---
+    // When DISCORD_GUILD_ID is set, flip Discord into "fleet mode":
+    //   - groupPolicy: allowlist — only listed guilds can talk to the bot
+    //   - guilds.<id>.users — owner (required so the owner can post in guild channels)
+    //   - guilds.<id>.channels — optional channel-level allowlist
+    // Without DISCORD_GUILD_ID, Discord stays DM-only (current default behavior).
+    if (process.env.DISCORD_GUILD_ID) {
+      const guildId = process.env.DISCORD_GUILD_ID;
+      config.channels.discord.groupPolicy = 'allowlist';
+      config.channels.discord.guilds = config.channels.discord.guilds || {};
+      const guild = config.channels.discord.guilds[guildId] = config.channels.discord.guilds[guildId] || {};
+
+      // Owner must be in guild.users to talk to the bot in guild channels
+      // (DM allowlist doesn't cover guild chat).
+      if (process.env.DISCORD_OWNER_ID) {
+        guild.users = guild.users || [];
+        if (!guild.users.includes(process.env.DISCORD_OWNER_ID)) {
+          guild.users.push(process.env.DISCORD_OWNER_ID);
+        }
+      }
+
+      // Optional channel-level allowlist. Without this, all channels in the
+      // guild are reachable (subject to Discord's own permissions).
+      if (process.env.DISCORD_GUILD_CHANNELS) {
+        const channelIds = process.env.DISCORD_GUILD_CHANNELS
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+        guild.channels = guild.channels || {};
+        for (const channelId of channelIds) {
+          guild.channels[channelId] = guild.channels[channelId] || { allow: true };
+        }
+      }
+
+      console.log(`[build-config] Discord: guild mode enabled for ${guildId}${process.env.DISCORD_GUILD_CHANNELS ? ` (${process.env.DISCORD_GUILD_CHANNELS.split(',').length} channel(s))` : ' (all channels)'}`);
+    }
+
+    // --- Thread bindings ---
+    // Enables per-thread session isolation and /focus /unfocus /agents commands.
+    // Useful for fleet setups where each thread is a distinct working context.
+    if (process.env.DISCORD_THREAD_BINDINGS === '1' || process.env.DISCORD_THREAD_BINDINGS === 'true') {
+      config.channels.discord.threadBindings = {
+        enabled: true,
+        idleHours: parseInt(process.env.DISCORD_THREAD_IDLE_HOURS || '24', 10),
+        spawnSubagentSessions: true,
+      };
+      console.log('[build-config] Discord: thread bindings enabled');
+    }
+
+    // --- Exec approvals ---
+    // Routes exec approval requests to the owner via DM by default.
+    // Requires DISCORD_OWNER_ID — the owner is the sole approver.
+    if ((process.env.DISCORD_EXEC_APPROVALS === '1' || process.env.DISCORD_EXEC_APPROVALS === 'true')
+        && process.env.DISCORD_OWNER_ID) {
+      config.channels.discord.execApprovals = {
+        enabled: true,
+        approvers: [process.env.DISCORD_OWNER_ID],
+        target: 'dm',
+        cleanupAfterResolve: true,
+      };
+      console.log('[build-config] Discord: exec approvals enabled (DM to owner)');
+    } else if ((process.env.DISCORD_EXEC_APPROVALS === '1' || process.env.DISCORD_EXEC_APPROVALS === 'true')
+               && !process.env.DISCORD_OWNER_ID) {
+      console.log('[build-config] WARNING: DISCORD_EXEC_APPROVALS set but DISCORD_OWNER_ID is not — skipping');
+    }
   }
 
   // --- Slack ---
