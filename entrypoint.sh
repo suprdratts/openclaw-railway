@@ -76,25 +76,96 @@ echo "[entrypoint] Skills copied to workspace ($(ls /data/workspace/skills/ | wc
 echo "[entrypoint] Data directories ready"
 
 # -----------------------------------------------------------------------------
-# 1b. Linear CLI multi-workspace credentials
-#     Write credentials.toml so the linear binary can use -w flag to switch
-#     workspaces. LINEAR_API_KEY env var locks the CLI to a single workspace
-#     and rejects -w, so we use the credentials file instead.
-#     XDG_CONFIG_HOME is passed through EXTRA_ENV_KEYS.
+# 1b. Linear CLI credentials
+#     Write credentials.toml on the persistent /data volume so the Linear CLI
+#     can switch workspaces via -w. Supported formats:
+#       LINEAR_API_KEYS=workspace:key,workspace:key
+#       LINEAR_API_KEYS=lin_api_single_key
+#     Legacy fallback (still supported):
+#       LINEAR_API_KEY + MOTUS_LINEAR_API_KEY
 # -----------------------------------------------------------------------------
-if [ -n "${LINEAR_API_KEY:-}" ]; then
-  LINEAR_CONFIG_DIR="${XDG_CONFIG_HOME:-/data/.config}/linear"
+LINEAR_CONFIG_DIR="/data/.config/linear"
+LINEAR_CREDENTIALS_FILE="${LINEAR_CONFIG_DIR}/credentials.toml"
+LINEAR_TMP_FILE="${LINEAR_CREDENTIALS_FILE}.tmp"
+LINEAR_KEYS_SOURCE=""
+
+if [ -n "${LINEAR_API_KEYS:-}" ]; then
+  LINEAR_KEYS_SOURCE="LINEAR_API_KEYS"
+elif [ -n "${LINEAR_API_KEY:-}" ]; then
+  LINEAR_KEYS_SOURCE="legacy"
+fi
+
+if [ -n "$LINEAR_KEYS_SOURCE" ]; then
   mkdir -p "$LINEAR_CONFIG_DIR"
-  {
-    echo 'default = "slaytek-systems"'
-    echo "slaytek-systems = \"$LINEAR_API_KEY\""
-    [ -n "${MOTUS_LINEAR_API_KEY:-}" ] && echo "motuscapital = \"$MOTUS_LINEAR_API_KEY\""
-  } > "$LINEAR_CONFIG_DIR/credentials.toml"
-  chmod 600 "$LINEAR_CONFIG_DIR/credentials.toml"
-  chown -R openclaw:openclaw "${XDG_CONFIG_HOME:-/data/.config}"
-  WORKSPACE_COUNT=1
-  [ -n "${MOTUS_LINEAR_API_KEY:-}" ] && WORKSPACE_COUNT=2
-  echo "[entrypoint] Linear credentials: ${WORKSPACE_COUNT} workspace(s) configured"
+  : > "$LINEAR_TMP_FILE"
+  LINEAR_DEFAULT_WORKSPACE=""
+  WORKSPACE_COUNT=0
+
+  if [ "$LINEAR_KEYS_SOURCE" = "LINEAR_API_KEYS" ]; then
+    IFS=',' read -ra LINEAR_KEY_ENTRIES <<< "$LINEAR_API_KEYS"
+    for raw_entry in "${LINEAR_KEY_ENTRIES[@]}"; do
+      entry="$(echo "$raw_entry" | xargs)"
+      [ -z "$entry" ] && continue
+
+      if printf '%s' "$entry" | grep -q ':'; then
+        workspace="$(printf '%s' "${entry%%:*}" | xargs)"
+        api_key="$(printf '%s' "${entry#*:}" | xargs)"
+      else
+        workspace="slaytek-systems"
+        api_key="$entry"
+      fi
+
+      if [ -z "$workspace" ] || [ -z "$api_key" ]; then
+        echo "[entrypoint] WARNING: Skipping invalid LINEAR_API_KEYS entry '$entry'"
+        continue
+      fi
+
+      if [ -z "$LINEAR_DEFAULT_WORKSPACE" ]; then
+        LINEAR_DEFAULT_WORKSPACE="$workspace"
+      fi
+
+      printf '%s = "%s"\n' "$workspace" "$api_key" >> "$LINEAR_TMP_FILE"
+      WORKSPACE_COUNT=$((WORKSPACE_COUNT + 1))
+    done
+  else
+    LINEAR_DEFAULT_WORKSPACE="slaytek-systems"
+    printf 'slaytek-systems = "%s"\n' "$LINEAR_API_KEY" >> "$LINEAR_TMP_FILE"
+    WORKSPACE_COUNT=1
+    if [ -n "${MOTUS_LINEAR_API_KEY:-}" ]; then
+      printf 'motuscapital = "%s"\n' "$MOTUS_LINEAR_API_KEY" >> "$LINEAR_TMP_FILE"
+      WORKSPACE_COUNT=2
+    fi
+    echo "[entrypoint] Linear credentials: using legacy LINEAR_API_KEY / MOTUS_LINEAR_API_KEY env vars"
+  fi
+
+  if [ "$WORKSPACE_COUNT" -gt 0 ] && [ -n "$LINEAR_DEFAULT_WORKSPACE" ]; then
+    {
+      printf 'default = "%s"\n' "$LINEAR_DEFAULT_WORKSPACE"
+      cat "$LINEAR_TMP_FILE"
+    } > "$LINEAR_CREDENTIALS_FILE"
+    chmod 600 "$LINEAR_CREDENTIALS_FILE"
+    chown -R openclaw:openclaw /data/.config
+    echo "[entrypoint] Linear credentials: ${WORKSPACE_COUNT} workspace(s) configured (default: ${LINEAR_DEFAULT_WORKSPACE})"
+  else
+    echo "[entrypoint] WARNING: LINEAR_API_KEYS was set but no valid entries were found — credentials file not written"
+  fi
+
+  rm -f "$LINEAR_TMP_FILE"
+fi
+
+# -----------------------------------------------------------------------------
+# 1c. Surface persistent config dirs under the gateway user's HOME
+#     The gateway runs with HOME=/home/openclaw. Symlinking /data/.config/*
+#     into ~/.config makes persisted CLI credentials available to exec
+#     subprocesses without relying on XDG_CONFIG_HOME propagation.
+# -----------------------------------------------------------------------------
+if [ -d "/data/.config" ]; then
+  mkdir -p /home/openclaw/.config
+  for dir in /data/.config/*/; do
+    [ -d "$dir" ] || continue
+    ln -sfnT "$dir" "/home/openclaw/.config/$(basename "$dir")"
+  done
+  chown -R openclaw:openclaw /home/openclaw/.config
 fi
 
 # -----------------------------------------------------------------------------

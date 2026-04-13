@@ -219,8 +219,24 @@ Install custom tools to `/data/bin/` (persists on the Railway volume across rede
 |----------|-------------|---------|
 | `EXEC_EXTRA_COMMANDS` | Comma-separated binary names to add to exec allowlist | `core-edge,my-tool` |
 | `EXTRA_ENV_KEYS` | Comma-separated env var names to pass through to the gateway | `CORE_URL,CORE_API_KEY` |
+| `LINEAR_API_KEYS` | Optional — writes `/data/.config/linear/credentials.toml` for the Linear CLI. Supports `workspace:key` pairs or a single key | `slaytek-systems:lin_api_abc123,motuscapital:lin_api_def456` |
 
 Binaries must be installed at `/data/bin/<name>`. The entrypoint adds `/data/bin/` to the gateway's PATH and appends each binary to exec-approvals so the agent can use them. At Tier 2+, exec is unrestricted so `EXEC_EXTRA_COMMANDS` has no effect (but `EXTRA_ENV_KEYS` still works).
+
+For Linear CLI credentials, you have three options:
+- **Recommended:** set `LINEAR_API_KEYS` and let the entrypoint generate `/data/.config/linear/credentials.toml`
+- **Manual:** SSH in once and place `credentials.toml` at `/data/.config/linear/credentials.toml`
+- **Legacy env vars:** `LINEAR_API_KEY` and `MOTUS_LINEAR_API_KEY` still work, but `LINEAR_API_KEYS` is the preferred format going forward
+
+Examples:
+
+```bash
+# Single-workspace setup (defaults to slaytek-systems)
+LINEAR_API_KEYS=lin_api_abc123
+
+# Multi-workspace setup
+LINEAR_API_KEYS=slaytek-systems:lin_api_abc123,motuscapital:lin_api_def456
+```
 
 ## Web Search
 

@@ -559,6 +559,14 @@
           "required": false
         },
         {
+          "key": "LINEAR_API_KEYS",
+          "label": "Linear API Keys",
+          "type": "text",
+          "description": "Optional — writes /data/.config/linear/credentials.toml for the Linear CLI. Supports workspace:key pairs or a single key.",
+          "placeholder": "slaytek-systems:lin_api_abc123,motuscapital:lin_api_def456",
+          "required": false
+        },
+        {
           "key": "TOOL_OBSERVER_ENABLED",
           "label": "Tool Observer",
           "type": "select",

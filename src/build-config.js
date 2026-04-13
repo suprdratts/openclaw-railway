@@ -582,6 +582,16 @@ function buildConfig() {
     console.log('[build-config] Custom binaries: /data/bin added to safeBinTrustedDirs + pathPrepend');
   }
 
+  // --- Linear CLI credentials (entrypoint-managed) ---
+  // LINEAR_API_KEYS is consumed by entrypoint.sh, which writes
+  // /data/.config/linear/credentials.toml for the Linear CLI. We log it here
+  // for deploy visibility, but never inject credentials into config.env.
+  if (process.env.LINEAR_API_KEYS) {
+    console.log('[build-config] Linear CLI: LINEAR_API_KEYS detected — entrypoint will write credentials.toml on /data/.config/linear');
+  } else if (process.env.LINEAR_API_KEY) {
+    console.log('[build-config] Linear CLI: legacy LINEAR_API_KEY detected — entrypoint will write credentials.toml on /data/.config/linear');
+  }
+
   // --- Extra Environment Keys ---
   // Extra env vars (e.g. for custom binaries) are passed via the entrypoint's
   // .secrets.env file → env -i passthrough. We log which keys were requested
