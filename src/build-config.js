@@ -297,6 +297,52 @@ function buildConfig() {
     console.log('[build-config] Heartbeat: light context mode enabled (skips bootstrap injection)');
   }
 
+  // --- Heartbeat Extended Configuration ---
+  if (process.env.HEARTBEAT_EVERY) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.every = process.env.HEARTBEAT_EVERY;
+    console.log(`[build-config] Heartbeat: every=${process.env.HEARTBEAT_EVERY}`);
+  }
+
+  if (process.env.HEARTBEAT_ACTIVE_HOURS_START) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.activeHours = config.agents.defaults.heartbeat.activeHours || {};
+    config.agents.defaults.heartbeat.activeHours.start = process.env.HEARTBEAT_ACTIVE_HOURS_START;
+    console.log(`[build-config] Heartbeat: activeHours.start=${process.env.HEARTBEAT_ACTIVE_HOURS_START}`);
+  }
+
+  if (process.env.HEARTBEAT_ACTIVE_HOURS_END) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.activeHours = config.agents.defaults.heartbeat.activeHours || {};
+    config.agents.defaults.heartbeat.activeHours.end = process.env.HEARTBEAT_ACTIVE_HOURS_END;
+    console.log(`[build-config] Heartbeat: activeHours.end=${process.env.HEARTBEAT_ACTIVE_HOURS_END}`);
+  }
+
+  if (process.env.HEARTBEAT_ACTIVE_HOURS_TIMEZONE) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.activeHours = config.agents.defaults.heartbeat.activeHours || {};
+    config.agents.defaults.heartbeat.activeHours.timezone = process.env.HEARTBEAT_ACTIVE_HOURS_TIMEZONE;
+    console.log(`[build-config] Heartbeat: activeHours.timezone=${process.env.HEARTBEAT_ACTIVE_HOURS_TIMEZONE}`);
+  }
+
+  if (process.env.HEARTBEAT_TARGET) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.target = process.env.HEARTBEAT_TARGET;
+    console.log(`[build-config] Heartbeat: target=${process.env.HEARTBEAT_TARGET}`);
+  }
+
+  if (process.env.HEARTBEAT_TO) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.to = process.env.HEARTBEAT_TO;
+    console.log(`[build-config] Heartbeat: to=${process.env.HEARTBEAT_TO}`);
+  }
+
+  if (process.env.HEARTBEAT_TIMEOUT_SECONDS) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.timeoutSeconds = parseInt(process.env.HEARTBEAT_TIMEOUT_SECONDS, 10);
+    console.log(`[build-config] Heartbeat: timeoutSeconds=${process.env.HEARTBEAT_TIMEOUT_SECONDS}`);
+  }
+
   // --- Compaction settings ---
   // Post-compaction section re-injection: ensures critical AGENTS.md sections
   // survive context compaction in long-running sessions and automated workflows.

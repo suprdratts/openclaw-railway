@@ -69,6 +69,20 @@ You **must** set `LLM_PRIMARY_MODEL` to match your provider.
 | `LLM_FALLBACK_MODELS` | Optional - Comma-separated fallback list |
 | `LLM_IMAGE_MODEL` | Optional - Vision model for image analysis (defaults to primary model) |
 
+### Heartbeat Configuration
+
+Configure periodic heartbeat/cron behavior. Heartbeats run on a schedule to keep the agent warm and handle scheduled tasks.
+
+| Variable | Description |
+|----------|-------------|
+| `HEARTBEAT_EVERY` | Cron expression for heartbeat interval (e.g., `*/5 * * * *` for every 5 minutes) |
+| `HEARTBEAT_ACTIVE_HOURS_START` | Start time for active hours window (e.g., `09:00`) |
+| `HEARTBEAT_ACTIVE_HOURS_END` | End time for active hours window (e.g., `17:00`) |
+| `HEARTBEAT_ACTIVE_HOURS_TIMEZONE` | IANA timezone for active hours (e.g., `America/New_York`) |
+| `HEARTBEAT_TARGET` | Target channel/platform for heartbeat output |
+| `HEARTBEAT_TO` | Destination for heartbeat messages (e.g., channel ID, thread ID) |
+| `HEARTBEAT_TIMEOUT_SECONDS` | Timeout for heartbeat execution in seconds |
+
 ### Format
 
 ```
