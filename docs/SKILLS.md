@@ -70,9 +70,10 @@ Add or update these in your Railway dashboard:
 | Variable | Value |
 |----------|-------|
 | `EXEC_EXTRA_COMMANDS` | `gog` (or append: `core-edge,gog` if you have existing entries) |
-| `EXTRA_ENV_KEYS` | `GOG_KEYRING_PASSWORD,XDG_CONFIG_HOME` (append to existing if needed) |
 | `GOG_KEYRING_PASSWORD` | A strong password (gog encrypts tokens at rest with this) |
 | `XDG_CONFIG_HOME` | `/data/.config` |
+
+`GOG_KEYRING_PASSWORD` and `XDG_CONFIG_HOME` are now first-class runtime env vars in the template — you do **not** need to add them to `EXTRA_ENV_KEYS`.
 
 `XDG_CONFIG_HOME` tells gog to store its config and encrypted keyring on the `/data` volume instead of `/home/openclaw/.config/` (which gets wiped on every deploy).
 
@@ -164,11 +165,11 @@ Drop the `--readonly` flag and add `--force-consent` to re-authorize with write 
 
 **"keyring is locked" or decryption errors**
 - `GOG_KEYRING_PASSWORD` env var is missing or doesn't match the password used during setup
-- Check: `EXTRA_ENV_KEYS` includes `GOG_KEYRING_PASSWORD`
+- Check: the Railway env var `GOG_KEYRING_PASSWORD` is set correctly
 
 **Token gone after redeploy**
 - `XDG_CONFIG_HOME` isn't set to `/data/.config` — gog is writing to `/home/openclaw/.config/` which gets wiped
-- Check: `EXTRA_ENV_KEYS` includes `XDG_CONFIG_HOME`, and the Railway env var `XDG_CONFIG_HOME=/data/.config` is set
+- Check: the Railway env var `XDG_CONFIG_HOME=/data/.config` is set
 
 **"command denied" when agent tries to run gog**
 - `EXEC_EXTRA_COMMANDS` doesn't include `gog`

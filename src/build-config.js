@@ -594,10 +594,15 @@ function buildConfig() {
 
   // --- Extra Environment Keys ---
   // Extra env vars (e.g. for custom binaries) are passed via the entrypoint's
-  // .secrets.env file → env -i passthrough. We log which keys were requested
-  // but don't inject values into config.env (they'd be plaintext on disk).
+  // .secrets.env file → env -i passthrough. First-class runtime vars are
+  // handled separately by entrypoint.sh, so we ignore them here.
   if (process.env.EXTRA_ENV_KEYS) {
-    const extraKeys = process.env.EXTRA_ENV_KEYS.split(',').map(s => s.trim()).filter(Boolean);
+    const firstClassRuntimeKeys = new Set(['TZ', 'OPENCLAW_TZ', 'XDG_CONFIG_HOME', 'GOG_KEYRING_PASSWORD']);
+    const extraKeys = process.env.EXTRA_ENV_KEYS
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .filter(key => !firstClassRuntimeKeys.has(key));
     for (const key of extraKeys) {
       if (!process.env[key]) {
         console.log(`[build-config] WARNING: EXTRA_ENV_KEYS lists '${key}' but it is not set`);
@@ -607,7 +612,8 @@ function buildConfig() {
   }
 
   // --- Timezone Override (v2026.3.13+) ---
-  // OPENCLAW_TZ is passed via the entrypoint's .secrets.env → env -i passthrough.
+  // entrypoint.sh treats TZ as the preferred user-facing timezone var and
+  // mirrors it to OPENCLAW_TZ for gateway/runtime compatibility.
   if (process.env.OPENCLAW_TZ) {
     console.log(`[build-config] Timezone: ${process.env.OPENCLAW_TZ}`);
   }

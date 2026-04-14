@@ -174,6 +174,17 @@ If voice messages aren't being transcribed, your provider likely doesn't support
 | `GATEWAY_TOKEN` | Authentication token for gateway | Auto-generated |
 | `GATEWAY_PORT` | Port for gateway (internal) | `18789` |
 
+## Core Runtime
+
+These are baseline runtime settings the template already understands. They are passed through automatically — you do **not** need to list them in `EXTRA_ENV_KEYS`.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TZ` | **Preferred** IANA timezone for the container/runtime (e.g., `America/New_York`, `Europe/London`). Affects shell tools, logs, and runtime timestamps. The entrypoint automatically mirrors this to `OPENCLAW_TZ` for gateway compatibility. | `UTC` |
+| `OPENCLAW_TZ` | Backward-compatible gateway timezone override. If set without `TZ`, the entrypoint mirrors it back to `TZ` so process time output stays aligned. Prefer `TZ` for new setups. | Unset |
+| `XDG_CONFIG_HOME` | Config-home directory for persisted CLI credentials/token stores. Set to `/data/.config` for tools like `gog` and other CLIs that should keep config on the Railway volume. | Unset |
+| `GOG_KEYRING_PASSWORD` | Password for gog's file-based keyring. Passed through automatically for the bundled `gog` skill — no `EXTRA_ENV_KEYS` entry needed. | Unset |
+
 ## Security Tier
 
 Control your agent's capabilities via environment variable. No SSH needed for Tiers 0-2.
@@ -221,7 +232,7 @@ Install custom tools to `/data/bin/` (persists on the Railway volume across rede
 | `EXTRA_ENV_KEYS` | Comma-separated env var names to pass through to the gateway | `CORE_URL,CORE_API_KEY` |
 | `LINEAR_API_KEYS` | Optional — writes `/data/.config/linear/credentials.toml` for the Linear CLI. Supports `workspace:key` pairs or a single key | `slaytek-systems:lin_api_abc123,motuscapital:lin_api_def456` |
 
-Binaries must be installed at `/data/bin/<name>`. The entrypoint adds `/data/bin/` to the gateway's PATH and appends each binary to exec-approvals so the agent can use them. At Tier 2+, exec is unrestricted so `EXEC_EXTRA_COMMANDS` has no effect (but `EXTRA_ENV_KEYS` still works).
+Binaries must be installed at `/data/bin/<name>`. The entrypoint adds `/data/bin/` to the gateway's PATH and appends each binary to exec-approvals so the agent can use them. At Tier 2+, exec is unrestricted so `EXEC_EXTRA_COMMANDS` has no effect (but `EXTRA_ENV_KEYS` still works for genuinely custom runtime vars).
 
 For Linear CLI credentials, you have three options:
 - **Recommended:** set `LINEAR_API_KEYS` and let the entrypoint generate `/data/.config/linear/credentials.toml`
@@ -269,7 +280,6 @@ See what your agent is doing in real-time. When enabled, tool call events (read,
 | `AGENT_NAME` | Display name for your agent |
 | `WORKSPACE_DIR` | Workspace directory path |
 | `LLM_HEARTBEAT_LIGHT_CONTEXT` | Set to `true` to skip bootstrap-file injection during heartbeat/cron turns — reduces token usage. Useful when heartbeats only need `HEARTBEAT.md` context |
-| `OPENCLAW_TZ` | IANA timezone for the container (e.g., `America/New_York`, `Europe/London`). Affects cron scheduling and timestamps. Default: UTC |
 
 ---
 

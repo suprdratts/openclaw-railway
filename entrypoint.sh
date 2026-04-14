@@ -76,6 +76,19 @@ echo "[entrypoint] Skills copied to workspace ($(ls /data/workspace/skills/ | wc
 echo "[entrypoint] Data directories ready"
 
 # -----------------------------------------------------------------------------
+# 1a. Normalize timezone env vars
+#     TZ is the POSIX-standard user-facing variable. OPENCLAW_TZ is kept for
+#     backward compatibility and mirrored so gateway scheduling/logs stay in
+#     sync with the broader process environment.
+# -----------------------------------------------------------------------------
+if [ -n "${TZ:-}" ] && [ -z "${OPENCLAW_TZ:-}" ]; then
+  export OPENCLAW_TZ="$TZ"
+fi
+if [ -n "${OPENCLAW_TZ:-}" ] && [ -z "${TZ:-}" ]; then
+  export TZ="$OPENCLAW_TZ"
+fi
+
+# -----------------------------------------------------------------------------
 # 1b. Linear CLI credentials
 #     Write credentials.toml on the persistent /data volume so the Linear CLI
 #     can switch workspaces via -w. Supported formats:
@@ -492,19 +505,28 @@ if [ -n "${GATEWAY_TOKEN:-}" ]; then
   printf 'GATEWAY_TOKEN=%s\n' "$GATEWAY_TOKEN" >> "$SECRETS_ENV_FILE"
 fi
 
-# Extra env keys (for custom binaries)
+# Core runtime env vars — first-class passthroughs, not EXTRA_ENV_KEYS extras.
+# TZ is the preferred user-facing timezone var; OPENCLAW_TZ is mirrored above
+# for backward compatibility. XDG_CONFIG_HOME and GOG_KEYRING_PASSWORD are used
+# by bundled runtime integrations like gog and persisted CLI config directories.
+FIRST_CLASS_RUNTIME_KEYS="TZ OPENCLAW_TZ XDG_CONFIG_HOME GOG_KEYRING_PASSWORD"
+for key in $FIRST_CLASS_RUNTIME_KEYS; do
+  val="$(eval echo "\${${key}:-}")"
+  [ -n "$val" ] && printf '%s=%s\n' "$key" "$val" >> "$SECRETS_ENV_FILE"
+done
+
+# Extra env keys (for genuinely user-custom binaries/integrations)
 if [ -n "${EXTRA_ENV_KEYS:-}" ]; then
   IFS=',' read -ra EXTRA_KEY_LIST <<< "$EXTRA_ENV_KEYS"
   for key in "${EXTRA_KEY_LIST[@]}"; do
     key="$(echo "$key" | xargs)"
+    [ -z "$key" ] && continue
+    case " $FIRST_CLASS_RUNTIME_KEYS " in
+      *" $key "*) continue ;;
+    esac
     val="$(eval echo "\${${key}:-}")"
     [ -n "$val" ] && printf '%s=%s\n' "$key" "$val" >> "$SECRETS_ENV_FILE"
   done
-fi
-
-# Timezone passthrough
-if [ -n "${OPENCLAW_TZ:-}" ]; then
-  printf 'OPENCLAW_TZ=%s\n' "$OPENCLAW_TZ" >> "$SECRETS_ENV_FILE"
 fi
 
 # Lock the secrets file — root-only, deleted after gateway starts

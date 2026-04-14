@@ -456,7 +456,7 @@
     {
       "id": "identity",
       "title": "Agent Identity",
-      "subtitle": "Give your agent a name and timezone.",
+      "subtitle": "Give your agent a name and set its runtime timezone.",
       "fields": [
         {
           "key": "AGENT_NAME",
@@ -467,12 +467,20 @@
           "required": false
         },
         {
-          "key": "OPENCLAW_TZ",
+          "key": "TZ",
           "label": "Timezone",
           "type": "text",
-          "description": "IANA timezone for cron scheduling and timestamps.",
+          "description": "Preferred POSIX/IANA timezone for the runtime. The entrypoint mirrors this to OPENCLAW_TZ automatically.",
           "placeholder": "America/New_York",
           "default": "UTC",
+          "required": false
+        },
+        {
+          "key": "OPENCLAW_TZ",
+          "label": "Gateway Timezone Override",
+          "type": "text",
+          "description": "Backward-compatible gateway timezone override. Usually leave unset and use TZ instead.",
+          "placeholder": "America/New_York",
           "required": false
         }
       ]
@@ -540,6 +548,21 @@
           "label": "Gateway Token",
           "type": "password",
           "description": "Authentication token for the gateway. Auto-generated if not set.",
+          "required": false
+        },
+        {
+          "key": "XDG_CONFIG_HOME",
+          "label": "Config Home Directory",
+          "type": "text",
+          "description": "Config-home path for persisted CLI credentials and token stores. Set to /data/.config for tools like gog.",
+          "placeholder": "/data/.config",
+          "required": false
+        },
+        {
+          "key": "GOG_KEYRING_PASSWORD",
+          "label": "Gog Keyring Password",
+          "type": "password",
+          "description": "Password for gog's file-based keyring. Passed through automatically for the bundled gog skill.",
           "required": false
         },
         {
