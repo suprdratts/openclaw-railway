@@ -34,6 +34,11 @@ New to all of this? Follow the [full setup walkthrough](docs/SETUP.md) — it co
 
 Persistent storage at `/data` is included automatically. Works with Telegram, Discord, and Slack. See [config/environment.md](config/environment.md) for all options.
 
+A few runtime vars are now first-class template settings rather than `EXTRA_ENV_KEYS` extras:
+- use `TZ` as the preferred timezone var (`OPENCLAW_TZ` is still supported for backward compatibility)
+- set `XDG_CONFIG_HOME=/data/.config` for persisted CLI credentials
+- set `GOG_KEYRING_PASSWORD` directly when using the bundled `gog` skill
+
 <details>
 <summary><strong>Getting your credentials</strong></summary>
 

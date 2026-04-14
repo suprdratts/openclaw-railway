@@ -4,7 +4,7 @@ OpenClaw has a skills system that extends your agent with third-party tools. On 
 
 ## How It Works
 
-The template's `EXEC_EXTRA_COMMANDS` and `EXTRA_ENV_KEYS` env vars handle the wiring:
+The template's `EXEC_EXTRA_COMMANDS` and `EXTRA_ENV_KEYS` env vars handle custom binary wiring. Some baseline runtime vars (for example `TZ`, `XDG_CONFIG_HOME`, and `GOG_KEYRING_PASSWORD`) are now first-class template settings and do not need `EXTRA_ENV_KEYS`.
 
 1. You SSH in and install a binary to `/data/bin/` (persists on the Railway volume)
 2. You set env vars in the Railway dashboard
@@ -24,7 +24,9 @@ No Homebrew needed. No `openclaw onboard`. Just the binary + env vars.
 | Variable | What to set | Example |
 |----------|-------------|---------|
 | `EXEC_EXTRA_COMMANDS` | Comma-separated binary names | `core-edge,gog` |
-| `EXTRA_ENV_KEYS` | Comma-separated env var names the binary needs at runtime | `MY_API_KEY,MY_CONFIG_DIR` |
+| `EXTRA_ENV_KEYS` | Comma-separated env var names the custom binary needs at runtime | `MY_API_KEY,MY_CONFIG_DIR` |
+
+Use `EXTRA_ENV_KEYS` for genuinely custom integrations. Built-in runtime vars that the template already understands should be set directly in Railway instead.
 
 ### SSH install steps
 
@@ -191,7 +193,7 @@ The same pattern works for any skill that needs an external binary:
 
 1. Download binary to `/data/bin/`
 2. Add to `EXEC_EXTRA_COMMANDS`
-3. Pass any needed env vars via `EXTRA_ENV_KEYS`
+3. Pass any custom env vars the binary needs via `EXTRA_ENV_KEYS`
 4. Redeploy
 
 Check [OpenClaw Skills Documentation](https://docs.openclaw.ai/skills) for available skills and their requirements.
