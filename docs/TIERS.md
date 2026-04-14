@@ -199,6 +199,17 @@ Set the appropriate env vars and the agent will connect to the remote browser au
 - Browser automation can interact with web pages (potential prompt injection surface)
 - All commands run immediately — no approval gate at this tier
 
+**Pre-installed binaries that become reachable at Tier 2:**
+
+The base image ships with a few binaries that are unreachable at Tier 0/1 (exec is blocked or allowlisted) but become live attack surface once exec opens up:
+
+- **`curl`** — arbitrary HTTP client. Used for fetching APIs but also enables exfiltration to any URL (no domain allowlist exists — see "Accepted residual risk: web_fetch exfiltration" in `SECURITY.md`).
+- **`procps`** (`ps`, `top`, `pgrep`) — process inspection. On Linux, `ps auxe` can read environment variables of *other* processes via `/proc/<pid>/environ`. The gateway starts with `env -i` + only the secrets it needs, but any process started by the agent still inherits whatever env it was given.
+- **`git`** — full git client. At Tier 2, `git clone` from the public internet works, and `git push` to an attacker-controlled remote is a viable exfil channel.
+- **`node`** — full Node.js runtime. Anything Node can do, the agent can do (arbitrary TCP, filesystem access within workspace sandbox, etc).
+
+None of these are bugs — they're expected at Tier 2. The point is that **Tier 2 is not "Tier 1 plus a bit more"** — it is a qualitatively different trust level. Only set `SECURITY_TIER=2` when you understand that the agent can reach out to the network, read process state, and run arbitrary code, with no approval gate.
+
 ---
 
 ## Tier 3: Operator

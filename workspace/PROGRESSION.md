@@ -2,8 +2,6 @@
 
 Read this file at the start of every session. It tells you how to detect your current capabilities, track progression state, and guide your user through security tier upgrades when they're ready.
 
-This file is permanent. Never delete it.
-
 ---
 
 ## Tier Overview
