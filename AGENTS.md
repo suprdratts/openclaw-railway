@@ -64,7 +64,12 @@ openclaw-railway/
 │   └── build-config.js  # Env vars → config
 └── config/
     ├── defaults.json    # Secure base config
-    └── environment.md   # Env var reference
+    ├── environment.md   # Env var reference
+    ├── exec-approvals-tier0.json  # Exec allowlist for Tier 0
+    ├── exec-approvals-tier1.json  # Exec allowlist for Tier 1
+    └── tier-inject/     # Tier-specific markdown injected into AGENTS.md & TOOLS.md at deploy
+        ├── agents-tier{0,1,2,3}.md  # Injected at <!-- TIER_INJECT -->
+        └── tools-tier{0,1,2,3}.md   # Injected at <!-- TOOLS_TIER_INJECT -->
 ```
 
 ## Environment Variables

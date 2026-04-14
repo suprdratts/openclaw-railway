@@ -204,152 +204,37 @@ fi
 # -----------------------------------------------------------------------------
 SECURITY_TIER="${SECURITY_TIER:-0}"
 
-# Determine tier metadata for injection
+# Determine tier metadata and load injection templates from config/tier-inject/
+TIER_INJECT_DIR="/app/config/tier-inject"
+
 case "$SECURITY_TIER" in
   0)
     TIER_NAME="Personal Assistant"
     TIER_EXEC_COMMANDS="ls"
-    TIER_INJECT_BLOCK="You are running at **Tier 0 — Personal Assistant** (default).
-
-**Your tools:** read, write, edit, apply_patch, exec (ls only), memory_get, memory_search, web_fetch, web_search, image, cron
-**Exec commands:** \`ls\` only. All other shell commands are blocked by the gateway.
-**Blocked tools:** browser, process, sessions_spawn, agents_list, nodes, gateway
-**File reading:** Use the \`read\` tool. It's sandboxed to your workspace (\`/data/workspace/\`).
-
-This is a capable starting point. You're a thinking partner with file access, web fetching, and persistent memory. When your human hits a ceiling and needs more, see \`PROGRESSION.md\` for how to guide them through upgrades. Never suggest upgrades unprompted — wait until they need something you can't do."
-    TOOLS_TIER_INJECT_BLOCK="**Tier 0 — Personal Assistant** (default)
-
-| Tool | Status | Notes |
-|------|--------|-------|
-| read | ✅ | Sandboxed to \`/data/workspace/\` |
-| write | ✅ | Sandboxed to \`/data/workspace/\` |
-| edit | ✅ | Sandboxed to \`/data/workspace/\` |
-| apply_patch | ✅ | Sandboxed to \`/data/workspace/\` |
-| exec | ⚠️ | \`ls\` only — all other commands blocked |
-| memory_get | ✅ | Reads from \`MEMORY.md\` and \`memory/\` |
-| memory_search | ✅ | Semantic search over memory (embeddings auto-configured) |
-| web_fetch | ✅ | GET requests only, no POST |
-| web_search | ✅ | Web search |
-| image | ✅ | Image analysis (vision) |
-| cron | ✅ | Scheduled tasks |
-| browser | ❌ | Blocked |
-| process | ❌ | Blocked |
-| sessions_spawn | ❌ | Blocked |
-| agents_list | ❌ | Blocked |
-| nodes | ❌ | Blocked |
-| gateway | ❌ | Blocked |
-
-**File access:** All file tools (read/write/edit) are sandboxed to your workspace. Paths outside \`/data/workspace/\` are rejected by the gateway."
     ;;
   1)
     TIER_NAME="Capable Agent"
     TIER_EXEC_COMMANDS="ls, find, wc, sort, uniq, git"
-    TIER_INJECT_BLOCK="You are running at **Tier 1 — Capable Agent**.
-
-**Your tools:** read, write, edit, apply_patch, exec (curated list), memory_get, memory_search, web_fetch, web_search, image, cron
-**Exec commands:** \`ls\`, \`find\`, \`wc\`, \`sort\`, \`uniq\`, \`git\`. Content-reading commands (cat, head, tail, grep) are NOT available — use the \`read\` tool instead (sandboxed to workspace).
-**Blocked tools:** browser, process, sessions_spawn, agents_list, nodes, gateway
-**File reading:** Use the \`read\` tool. It supports \`offset\` and \`limit\` for partial reads. It's sandboxed to your workspace.
-**Note:** Commands not in the allowlist are silently denied. No approval queue — if you need a command, ask your user to add it via \`EXEC_EXTRA_COMMANDS\`."
-    TOOLS_TIER_INJECT_BLOCK="**Tier 1 — Capable Agent**
-
-| Tool | Status | Notes |
-|------|--------|-------|
-| read | ✅ | Sandboxed to \`/data/workspace/\` |
-| write | ✅ | Sandboxed to \`/data/workspace/\` |
-| edit | ✅ | Sandboxed to \`/data/workspace/\` |
-| apply_patch | ✅ | Sandboxed to \`/data/workspace/\` |
-| exec | ⚠️ | Curated: \`ls\`, \`find\`, \`wc\`, \`sort\`, \`uniq\`, \`git\`. No cat/head/tail/grep — use \`read\`. Unlisted commands are denied. |
-| memory_get | ✅ | Reads from \`MEMORY.md\` and \`memory/\` |
-| memory_search | ✅ | Semantic search over memory |
-| web_fetch | ✅ | GET requests only, no POST |
-| web_search | ✅ | Web search |
-| image | ✅ | Image analysis (vision) |
-| cron | ✅ | Scheduled tasks |
-| browser | ❌ | Blocked |
-| process | ❌ | Blocked |
-| sessions_spawn | ❌ | Blocked |
-| agents_list | ❌ | Blocked |
-| nodes | ❌ | Blocked |
-| gateway | ❌ | Blocked |
-
-**File access:** All file tools (read/write/edit) are sandboxed to your workspace. Paths outside \`/data/workspace/\` are rejected by the gateway.
-**Exec note:** Commands not in the allowlist are denied. No approval queue."
     ;;
   2)
     TIER_NAME="Power User"
     TIER_EXEC_COMMANDS="any"
-    TIER_INJECT_BLOCK="You are running at **Tier 2 — Power User**.
-
-**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_spawn, sessions_yield, agents_list
-**Exec commands:** Any command. No approval gate.
-**Blocked tools:** nodes, gateway
-
-Confirm before running unfamiliar commands. Sub-agents inherit your permissions — spawn deliberately. At this tier, prompt injection through web content or browser pages can lead to real-world consequences (file modifications, network requests, process spawning). Be extra cautious with unfamiliar URLs and untrusted content."
-    TOOLS_TIER_INJECT_BLOCK="**Tier 2 — Power User**
-
-| Tool | Status | Notes |
-|------|--------|-------|
-| read | ✅ | Sandboxed to \`/data/workspace/\` |
-| write | ✅ | Sandboxed to \`/data/workspace/\` |
-| edit | ✅ | Sandboxed to \`/data/workspace/\` |
-| apply_patch | ✅ | Sandboxed to \`/data/workspace/\` |
-| exec | ✅ | Any command. No approval gate. |
-| memory_get | ✅ | Reads from \`MEMORY.md\` and \`memory/\` |
-| memory_search | ✅ | Semantic search over memory |
-| web_fetch | ✅ | GET requests only, no POST |
-| web_search | ✅ | Web search |
-| image | ✅ | Image analysis (vision) |
-| cron | ✅ | Scheduled tasks |
-| browser | ✅ | Web browsing |
-| process | ✅ | Process management |
-| sessions_spawn | ✅ | Spawn sub-sessions |
-| sessions_yield | ✅ | Yield orchestrator turns |
-| agents_list | ✅ | List available agents |
-| nodes | ❌ | Blocked |
-| gateway | ❌ | Blocked |
-
-**File access:** All file tools (read/write/edit) are sandboxed to your workspace. Paths outside \`/data/workspace/\` are rejected by the gateway."
     ;;
   3)
     TIER_NAME="Operator"
     TIER_EXEC_COMMANDS="any"
-    TIER_INJECT_BLOCK="You are running at **Tier 2 — Power User** (Tier 3 requested but requires SSH to complete).
-
-**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_spawn, sessions_yield, agents_list
-**Exec commands:** Any command. No approval gate.
-**Blocked tools:** nodes, gateway
-
-Confirm before running unfamiliar commands. Sub-agents inherit your permissions — spawn deliberately. At this tier, prompt injection through web content or browser pages can lead to real-world consequences (file modifications, network requests, process spawning). Be extra cautious with unfamiliar URLs and untrusted content.
-
-Check for a \`.tier-status\` file in the workspace — your user set SECURITY_TIER=3 but only Tier 2 was applied. Guide them through the SSH steps in \`PROGRESSION.md\` Section D."
-    TOOLS_TIER_INJECT_BLOCK="**Tier 2 — Power User** (Tier 3 requested — requires SSH to complete)
-
-| Tool | Status | Notes |
-|------|--------|-------|
-| read | ✅ | Sandboxed to \`/data/workspace/\` |
-| write | ✅ | Sandboxed to \`/data/workspace/\` |
-| edit | ✅ | Sandboxed to \`/data/workspace/\` |
-| apply_patch | ✅ | Sandboxed to \`/data/workspace/\` |
-| exec | ✅ | Any command. No approval gate. |
-| memory_get | ✅ | Reads from \`MEMORY.md\` and \`memory/\` |
-| memory_search | ✅ | Semantic search over memory |
-| web_fetch | ✅ | GET requests only, no POST |
-| web_search | ✅ | Web search |
-| image | ✅ | Image analysis (vision) |
-| cron | ✅ | Scheduled tasks |
-| browser | ✅ | Web browsing |
-| process | ✅ | Process management |
-| sessions_spawn | ✅ | Spawn sub-sessions |
-| sessions_yield | ✅ | Yield orchestrator turns |
-| agents_list | ✅ | List available agents |
-| nodes | ❌ | Blocked |
-| gateway | ❌ | Blocked |
-
-**File access:** All file tools (read/write/edit) are sandboxed to your workspace. Paths outside \`/data/workspace/\` are rejected by the gateway.
-**Tier 3 note:** Check \`.tier-status\` in workspace. Guide user through SSH steps in \`PROGRESSION.md\` Section D."
     ;;
 esac
+
+# Load tier-specific injection templates from files
+AGENTS_INJECT_SRC="${TIER_INJECT_DIR}/agents-tier${SECURITY_TIER}.md"
+TOOLS_INJECT_SRC="${TIER_INJECT_DIR}/tools-tier${SECURITY_TIER}.md"
+
+if [ ! -f "$AGENTS_INJECT_SRC" ] || [ ! -f "$TOOLS_INJECT_SRC" ]; then
+  echo "[entrypoint] ERROR: Missing tier-inject template for tier ${SECURITY_TIER}"
+  echo "[entrypoint] Expected: ${AGENTS_INJECT_SRC} and ${TOOLS_INJECT_SRC}"
+  exit 1
+fi
 
 echo "[entrypoint] Tier ${SECURITY_TIER} (${TIER_NAME})"
 
@@ -366,15 +251,11 @@ done
 # Inject tier-specific content into AGENTS.md before locking
 AGENTS_DST="/data/workspace/AGENTS.md"
 if [ -f "$AGENTS_DST" ]; then
-  TIER_INJECT_FILE=$(mktemp)
-  echo "$TIER_INJECT_BLOCK" > "$TIER_INJECT_FILE"
-  # Replace placeholder with tier content (awk -v can't handle multi-line, so read from file)
   awk '
-    /<!-- TIER_INJECT -->/ { while ((getline line < "'"$TIER_INJECT_FILE"'") > 0) print line; next }
+    /<!-- TIER_INJECT -->/ { while ((getline line < "'"$AGENTS_INJECT_SRC"'") > 0) print line; next }
     { print }
   ' "$AGENTS_DST" > "${AGENTS_DST}.tmp"
   mv "${AGENTS_DST}.tmp" "$AGENTS_DST"
-  rm -f "$TIER_INJECT_FILE"
   echo "[entrypoint] Tier ${SECURITY_TIER} injected into AGENTS.md"
 
   # FOCUS.md lives in the workspace as a standalone file the agent reads directly.
@@ -385,14 +266,11 @@ fi
 # Inject tier-specific content into TOOLS.md before locking
 TOOLS_DST="/data/workspace/TOOLS.md"
 if [ -f "$TOOLS_DST" ]; then
-  TOOLS_INJECT_FILE=$(mktemp)
-  echo "$TOOLS_TIER_INJECT_BLOCK" > "$TOOLS_INJECT_FILE"
   awk '
-    /<!-- TOOLS_TIER_INJECT -->/ { while ((getline line < "'"$TOOLS_INJECT_FILE"'") > 0) print line; next }
+    /<!-- TOOLS_TIER_INJECT -->/ { while ((getline line < "'"$TOOLS_INJECT_SRC"'") > 0) print line; next }
     { print }
   ' "$TOOLS_DST" > "${TOOLS_DST}.tmp"
   mv "${TOOLS_DST}.tmp" "$TOOLS_DST"
-  rm -f "$TOOLS_INJECT_FILE"
   echo "[entrypoint] Tier ${SECURITY_TIER} injected into TOOLS.md"
 fi
 
@@ -820,12 +698,19 @@ start_gateway() {
 if [ -f "$CONFIG_FILE" ]; then
   start_gateway
 else
-  echo "[entrypoint] No config generated (missing required env vars)"
-  echo "[entrypoint] Set LLM provider key + channel token, then redeploy"
-  echo "[entrypoint] Or SSH in and run: openclaw onboard"
+  echo "[entrypoint] =============================================="
+  echo "[entrypoint] WARNING: No config generated — fallback mode"
+  echo "[entrypoint] =============================================="
+  echo "[entrypoint] build-config.js did not produce $CONFIG_FILE."
+  echo "[entrypoint] Missing required env vars (LLM provider key + channel token)."
+  echo "[entrypoint] The gateway is NOT running. Fix: set env vars and redeploy,"
+  echo "[entrypoint] or SSH in and run: openclaw onboard"
+  echo "[entrypoint] Starting config-watcher fallback (logs streamed below)..."
 
-  # Start config watcher as fallback for manual onboard
-  nohup /app/config-watcher.sh > /dev/null 2>&1 &
+  # Stream watcher output to stdout so Railway logs capture it.
+  /app/config-watcher.sh 2>&1 | while IFS= read -r line; do
+    echo "[config-watcher] $line"
+  done &
   disown
 fi
 
