@@ -288,6 +288,12 @@ function buildConfig() {
     config.agents.defaults.heartbeat.model = process.env.LLM_HEARTBEAT_MODEL;
   }
 
+  if (process.env.HEARTBEAT_SESSION) {
+    config.agents.defaults.heartbeat = config.agents.defaults.heartbeat || {};
+    config.agents.defaults.heartbeat.session = process.env.HEARTBEAT_SESSION;
+    console.log(`[build-config] Heartbeat: session=${process.env.HEARTBEAT_SESSION}`);
+  }
+
   // Lightweight heartbeat context (v2026.3.1+) — reduces token usage for cron/heartbeat turns.
   // Default ON: heartbeats only need HEARTBEAT.md, not the full bootstrap context.
   // Set LLM_HEARTBEAT_LIGHT_CONTEXT=false to disable.

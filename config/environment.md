@@ -80,6 +80,7 @@ Configure periodic heartbeat/cron behavior. Heartbeats run on a schedule to keep
 | `HEARTBEAT_ACTIVE_HOURS_END` | End time for active hours window (e.g., `17:00`) |
 | `HEARTBEAT_ACTIVE_HOURS_TIMEZONE` | IANA timezone for active hours (e.g., `America/New_York`) |
 | `HEARTBEAT_TARGET` | Target channel/platform for heartbeat output |
+| `HEARTBEAT_SESSION` | Session ID heartbeat should run in (e.g., `agent:main:discord:channel:1492353591346860103`) |
 | `HEARTBEAT_TO` | Destination for heartbeat messages (e.g., channel ID, thread ID) |
 | `HEARTBEAT_TIMEOUT_SECONDS` | Timeout for heartbeat execution in seconds |
 
@@ -339,3 +340,87 @@ SLACK_BOT_TOKEN=xoxb-...
 SLACK_APP_TOKEN=xapp-...
 SLACK_OWNER_ID=U01234567
 ```
+
+## Config Overlay (Advanced)
+
+For settings that `build-config.js` doesn't support via environment variables,
+you can place a `config-overlay.json` file on the persistent volume at
+`/data/config-overlay.json`. This file is deep-merged into the generated
+`openclaw.json` after `build-config.js` runs on every deploy.
+
+The overlay survives redeploys. Overlay values win on conflict with generated values.
+
+### Common use cases
+
+- **Multi-agent setup** (`agents.list`, `bindings`)
+- **Agent-to-agent messaging** (`tools.agentToAgent`)
+- **Subagent orchestration depth** (`agents.defaults.subagents.maxSpawnDepth`)
+- **Per-agent tool policies** (tool allow/deny per agent)
+- **Custom plugin config** beyond what env vars expose
+
+### Example: two agents routed by Discord channel
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "subagents": {
+        "maxSpawnDepth": 2,
+        "maxConcurrent": 8,
+        "maxChildrenPerAgent": 5,
+        "runTimeoutSeconds": 900
+      }
+    },
+    "list": [
+      {
+        "id": "coworker",
+        "name": "Atlas",
+        "default": true,
+        "workspace": "/data/workspace-coworker",
+        "agentDir": "/data/.openclaw/agents/coworker/agent",
+        "identity": { "name": "Atlas" }
+      },
+      {
+        "id": "scheduler",
+        "name": "Hex",
+        "workspace": "/data/workspace-scheduler",
+        "agentDir": "/data/.openclaw/agents/scheduler/agent",
+        "identity": { "name": "Hex" }
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "agentId": "scheduler",
+      "match": {
+        "channel": "discord",
+        "peer": { "kind": "channel", "id": "HEX_CHANNEL_ID" }
+      }
+    },
+    {
+      "agentId": "coworker",
+      "match": { "channel": "discord" }
+    },
+    {
+      "agentId": "scheduler",
+      "match": { "channel": "telegram" }
+    }
+  ],
+  "tools": {
+    "agentToAgent": {
+      "enabled": true,
+      "allow": ["coworker", "scheduler"]
+    }
+  }
+}
+```
+
+### Notes
+
+- The overlay is merged after `build-config.js`, so overlay values override generated values.
+- Arrays are replaced, not appended. If your overlay sets `agents.list`, it replaces the entire list.
+- Objects are deep-merged. If your overlay sets `agents.defaults.subagents`, it merges with the existing defaults.
+- The entrypoint never rewrites overlay contents, but it does harden the file after reading it to `root:openclaw` with mode `640`.
+- Treat the overlay as operator-managed deployment config, not agent-managed workspace state.
+- Create workspace directories before deploying an overlay that references them, for example: `mkdir -p /data/workspace-coworker /data/workspace-scheduler`
+- Invalid JSON in the overlay will cause the entrypoint to exit with an error. Validate before deploying.

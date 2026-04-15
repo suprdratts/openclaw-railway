@@ -251,6 +251,15 @@
           "advanced": true
         },
         {
+          "key": "HEARTBEAT_SESSION",
+          "label": "Heartbeat Session",
+          "type": "text",
+          "description": "Session ID heartbeat should run in instead of the default main session.",
+          "placeholder": "agent:main:discord:channel:1492353591346860103",
+          "required": false,
+          "advanced": true
+        },
+        {
           "key": "LLM_SUBAGENT_MODEL",
           "label": "Sub-agent Model",
           "type": "text",
