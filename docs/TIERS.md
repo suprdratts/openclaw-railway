@@ -178,7 +178,8 @@ SECURITY_TIER=2
 Redeploy.
 
 **What changes:**
-- `process`, `browser`, `sessions_spawn`, `agents_list` moved from deny to allow
+- `process`, `browser`, and the full session/orchestration toolset move from deny to allow
+- Session/orchestration tools now include `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, and `agents_list`
 - Exec switches from allowlist to full mode
 - No exec-approvals file deployed (not needed in full mode)
 - `ask: off` — no runtime approval gate, all commands run immediately
@@ -340,7 +341,7 @@ You can set different capabilities for different channels. For example, Telegram
   channels: {
     telegram: {
       tools: {
-        allow: ["process", "browser", "sessions_spawn"]
+        allow: ["process", "browser", "sessions_list", "sessions_history", "sessions_send", "sessions_spawn", "sessions_yield", "subagents"]
       }
     }
   }

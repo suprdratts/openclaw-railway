@@ -103,11 +103,13 @@ function applySecurityTier(config, tier) {
   }
 
   if (tier >= 2) {
-    // Tier 2+: unlock process, browser, sessions_spawn, agents_list
+    // Tier 2+: unlock full orchestration/session tools plus process + browser
     config.tools.allow = [
       'read', 'write', 'edit', 'memory_get', 'memory_search',
       'web_search', 'web_fetch', 'exec', 'cron', 'image',
-      'process', 'browser', 'sessions_spawn', 'sessions_yield', 'agents_list',
+      'process', 'browser',
+      'sessions_list', 'sessions_history', 'sessions_send',
+      'sessions_spawn', 'sessions_yield', 'subagents', 'agents_list',
     ];
     config.tools.deny = ['nodes', 'gateway'];
 

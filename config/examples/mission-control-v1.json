@@ -1,0 +1,105 @@
+{
+  "agents": {
+    "defaults": {
+      "subagents": {
+        "maxSpawnDepth": 2,
+        "maxConcurrent": 6,
+        "runTimeoutSeconds": 900
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "default": true,
+        "name": "Orchestrator",
+        "workspace": "/data/workspace",
+        "model": "zai/glm-5.1",
+        "thinkingDefault": "high",
+        "reasoningDefault": "on",
+        "subagents": {
+          "allowAgents": ["scheduler", "researcher"]
+        }
+      },
+      {
+        "id": "scheduler",
+        "name": "Scheduler",
+        "workspace": "/data/workspace-scheduler",
+        "agentDir": "/data/.openclaw/agents/scheduler/agent",
+        "model": "minimax/minimax-m2.7",
+        "thinkingDefault": "medium",
+        "reasoningDefault": "on"
+      },
+      {
+        "id": "researcher",
+        "name": "Researcher",
+        "workspace": "/data/workspace-researcher",
+        "agentDir": "/data/.openclaw/agents/researcher/agent",
+        "model": "minimax/minimax-m2.7",
+        "thinkingDefault": "medium",
+        "reasoningDefault": "on"
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "agentId": "main",
+      "comment": "Primary command room (#orchestrator)",
+      "match": {
+        "channel": "discord",
+        "peer": {
+          "kind": "channel",
+          "id": "1494182910205497384"
+        }
+      }
+    },
+    {
+      "agentId": "scheduler",
+      "comment": "Heartbeat / ambient ops lane (#heartbeat)",
+      "match": {
+        "channel": "discord",
+        "peer": {
+          "kind": "channel",
+          "id": "1494182971043741808"
+        }
+      }
+    },
+    {
+      "agentId": "scheduler",
+      "comment": "Direct scheduling lane (#scheduler)",
+      "match": {
+        "channel": "discord",
+        "peer": {
+          "kind": "channel",
+          "id": "1494183350532051064"
+        }
+      }
+    },
+    {
+      "agentId": "researcher",
+      "comment": "Research lane (#research)",
+      "match": {
+        "channel": "discord",
+        "peer": {
+          "kind": "channel",
+          "id": "1494183402092363888"
+        }
+      }
+    },
+    {
+      "agentId": "main",
+      "comment": "Fallback for other Discord messages on the default account",
+      "match": {
+        "channel": "discord"
+      }
+    }
+  ],
+  "tools": {
+    "sessions": {
+      "visibility": "all"
+    },
+    "agentToAgent": {
+      "enabled": true,
+      "allow": ["main", "scheduler", "researcher"]
+    }
+  }
+}

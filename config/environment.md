@@ -270,7 +270,7 @@ See what your agent is doing in real-time. When enabled, tool call events (read,
 | `TOOL_OBSERVER_THREAD_ID` | Telegram topic or Discord thread ID | None |
 | `TOOL_OBSERVER_VERBOSITY` | `minimal` (tool name only), `normal` (with summary), `verbose` (with duration/status) | `normal` |
 
-**Recommended setup:** Create a dedicated Telegram topic (thread) for tool activity so it doesn't clutter your main chat. Set `TOOL_OBSERVER_THREAD_ID` to that topic's ID.
+**Recommended setup:** Create a dedicated Telegram topic or Discord channel/thread for tool activity so it doesn't clutter your main chat. Set `TOOL_OBSERVER_CHAT_ID` to the destination channel and optionally `TOOL_OBSERVER_THREAD_ID` if you want thread/topic delivery.
 
 **Note:** The observer reads tool calls from session transcript files, not gateway stdout. No logging config changes needed.
 
@@ -417,6 +417,7 @@ The overlay survives redeploys. Overlay values win on conflict with generated va
 
 ### Notes
 
+- For a concrete Discord multi-agent example, see [docs/MISSION-CONTROL.md](../docs/MISSION-CONTROL.md) and `config/examples/mission-control-v1.json`.
 - The overlay is merged after `build-config.js`, so overlay values override generated values.
 - Arrays are replaced, not appended. If your overlay sets `agents.list`, it replaces the entire list.
 - Objects are deep-merged. If your overlay sets `agents.defaults.subagents`, it merges with the existing defaults.

@@ -15,8 +15,12 @@
 | cron | ✅ | Scheduled tasks |
 | browser | ✅ | Web browsing |
 | process | ✅ | Process management |
+| sessions_list | ✅ | List visible sessions |
+| sessions_history | ✅ | Inspect other session transcripts |
+| sessions_send | ✅ | Send messages across sessions/agents |
 | sessions_spawn | ✅ | Spawn sub-sessions |
 | sessions_yield | ✅ | Yield orchestrator turns |
+| subagents | ✅ | Inspect/steer spawned subagents |
 | agents_list | ✅ | List available agents |
 | nodes | ❌ | Blocked |
 | gateway | ❌ | Blocked |

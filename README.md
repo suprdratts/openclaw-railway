@@ -147,6 +147,7 @@ TELEGRAM_OWNER_ID=987654321
 |-------|-------------|
 | [Environment Variables](config/environment.md) | All supported env vars |
 | [Setup Guide](docs/SETUP.md) | Step-by-step deployment |
+| [Mission Control (Discord)](docs/MISSION-CONTROL.md) | Multi-agent Discord control-panel setup |
 | [Security Tiers](docs/TIERS.md) | Unlocking capabilities |
 | [Security Model](docs/SECURITY.md) | How protection works |
 | [Providers](docs/PROVIDERS.md) | LLM provider configuration |

@@ -1,6 +1,6 @@
 You are running at **Tier 2 — Power User**.
 
-**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_spawn, sessions_yield, agents_list
+**Your tools:** read, write, edit, exec (full), memory_get, memory_search, web_fetch, cron, browser, process, sessions_list, sessions_history, sessions_send, sessions_spawn, sessions_yield, subagents, agents_list
 **Exec commands:** Any command. No approval gate.
 **Blocked tools:** nodes, gateway
 
