@@ -25,7 +25,7 @@
         "name": "Scheduler",
         "workspace": "/data/workspace-scheduler",
         "agentDir": "/data/.openclaw/agents/scheduler/agent",
-        "model": "minimax/minimax-m2.7",
+        "model": "Minimax/MiniMax-M2.7",
         "thinkingDefault": "medium",
         "reasoningDefault": "on"
       },
@@ -34,7 +34,7 @@
         "name": "Researcher",
         "workspace": "/data/workspace-researcher",
         "agentDir": "/data/.openclaw/agents/researcher/agent",
-        "model": "minimax/minimax-m2.7",
+        "model": "zai/glm-5.1",
         "thinkingDefault": "medium",
         "reasoningDefault": "on"
       }
