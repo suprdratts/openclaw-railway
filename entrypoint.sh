@@ -409,6 +409,57 @@ echo "[entrypoint] Building config from environment variables..."
 node /app/src/build-config.js
 
 # -----------------------------------------------------------------------------
+# 4a. Merge config overlay (optional)
+#     Users can place a config-overlay.json on the persistent volume to add
+#     settings that build-config.js doesn't generate — e.g. agents.list,
+#     bindings, tools.agentToAgent, subagent depth config.
+#     The overlay is deep-merged into the generated config. Overlay values
+#     win on conflict. The overlay file is never modified by the entrypoint.
+# -----------------------------------------------------------------------------
+CONFIG_OVERLAY="/data/config-overlay.json"
+if [ -f "$CONFIG_OVERLAY" ]; then
+  echo "[entrypoint] Merging config overlay from $CONFIG_OVERLAY..."
+  node -e "
+    const fs = require('fs');
+    const configPath = '$CONFIG_FILE';
+    const overlayPath = '$CONFIG_OVERLAY';
+
+    function deepMerge(target, source) {
+      for (const key of Object.keys(source)) {
+        if (
+          source[key] !== null &&
+          typeof source[key] === 'object' &&
+          !Array.isArray(source[key]) &&
+          target[key] !== null &&
+          typeof target[key] === 'object' &&
+          !Array.isArray(target[key])
+        ) {
+          deepMerge(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+      return target;
+    }
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const overlay = JSON.parse(fs.readFileSync(overlayPath, 'utf-8'));
+    const merged = deepMerge(config, overlay);
+    fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), { mode: 0o600 });
+    const keys = Object.keys(overlay);
+    console.log('[entrypoint] Config overlay merged (' + keys.join(', ') + ')');
+  "
+else
+  echo "[entrypoint] No config overlay found (optional: place config-overlay.json on volume)"
+fi
+
+if [ -f "$CONFIG_OVERLAY" ]; then
+  chown root:openclaw "$CONFIG_OVERLAY"
+  chmod 640 "$CONFIG_OVERLAY"
+  echo "[entrypoint] Config overlay hardened (root:openclaw 640)"
+fi
+
+# -----------------------------------------------------------------------------
 # 4b. Harden config file permissions
 #     Config is 640 root:openclaw — gateway can read, agent cannot write.
 #     This blocks the privilege escalation attack (agent overwriting config).
