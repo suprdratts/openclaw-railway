@@ -675,6 +675,23 @@ function main() {
 
   const config = buildConfig();
 
+  // v2026.4.x added a "suspicious config recovery" flow that compares the
+  // freshly-read config against a fingerprint of the last gateway-written
+  // config (logs/config-health.json). One of the suspicion checks is
+  // "missing-meta-vs-last-good": baseline had a `meta` field, current
+  // doesn't. The gateway writes its own `meta` block, so on every redeploy
+  // our regenerated config (no meta) trips this check, gateway flags it
+  // suspicious, and tries to restore from .bak (which we clear separately
+  // in the entrypoint, but the audit log spam and EACCES warnings remain).
+  //
+  // Writing our own `meta` keeps `hasMeta:true` stable across boots so the
+  // suspicious check returns false. Presence is what matters; the gateway
+  // doesn't validate the contents.
+  config.meta = {
+    lastTouchedVersion: 'railway-template',
+    lastTouchedAt: new Date().toISOString(),
+  };
+
   // Ensure directory exists
   const configDir = path.dirname(CONFIG_PATH);
   if (!fs.existsSync(configDir)) {
