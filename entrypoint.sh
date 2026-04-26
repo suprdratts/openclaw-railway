@@ -404,6 +404,27 @@ fi
 # -----------------------------------------------------------------------------
 CONFIG_FILE="/data/.openclaw/openclaw.json"
 
+# Clear gateway baselines before regenerating config.
+# In v2026.4.x the gateway compares each freshly-read openclaw.json against a
+# `lastKnownGood` fingerprint (stored in logs/config-health.json). If the new
+# config differs in suspicious ways — e.g. missing the `meta` field that the
+# gateway itself wrote on a previous boot — it treats the file as "clobbered",
+# moves our entrypoint-generated config aside as openclaw.json.clobbered.<ts>,
+# and restores from openclaw.json.bak. That silently reverts every redeploy.
+#
+# Since our entrypoint is the source of truth (re-derived from env vars on
+# every boot), there is no recovery scenario where reverting to .bak helps.
+# Wiping baselines and stale snapshots forces the gateway to accept whatever
+# build-config.js produces.
+rm -f \
+  /data/.openclaw/openclaw.json.bak \
+  /data/.openclaw/openclaw.json.bak.* \
+  /data/.openclaw/openclaw.json.clobbered.* \
+  /data/.openclaw/openclaw.json.last-good \
+  /data/.openclaw/logs/config-health.json \
+  /data/.openclaw/logs/config-audit.jsonl 2>/dev/null
+echo "[entrypoint] Cleared gateway config baselines (.bak, .clobbered.*, config-health.json)"
+
 # Always regenerate config from env vars to pick up changes
 echo "[entrypoint] Building config from environment variables..."
 node /app/src/build-config.js
@@ -659,11 +680,21 @@ start_gateway() {
     done < "$SECRETS_ENV_FILE"
   fi
 
+  # Bonjour/mDNS gateway discovery is useless on Railway (no LAN multicast)
+  # and crashes the gateway with `CIAO PROBING CANCELLED` unhandled rejections
+  # when the advertiser gets stuck in the probing state. Disable by default;
+  # users on a multicast-capable network can opt back in via OPENCLAW_ENABLE_BONJOUR=1.
+  BONJOUR_ENV_ARG=""
+  if [ "${OPENCLAW_ENABLE_BONJOUR:-0}" != "1" ]; then
+    BONJOUR_ENV_ARG="OPENCLAW_DISABLE_BONJOUR=1"
+  fi
+
   env -i \
     HOME=/home/openclaw \
     PATH=/data/bin:/usr/local/bin:/usr/bin:/bin \
     OPENCLAW_STATE_DIR=/data/.openclaw \
     NODE_ENV=production \
+    ${BONJOUR_ENV_ARG} \
     "${SECRETS_ARGS[@]}" \
     su openclaw -c "cd /data/workspace && openclaw gateway run --port ${GATEWAY_PORT} --compact 2>&1" | node /app/src/log-bridge.js ${LOG_BRIDGE_ARGS} &
   GATEWAY_PID=$!
@@ -770,6 +801,25 @@ start_gateway() {
 
 if [ -f "$CONFIG_FILE" ]; then
   start_gateway
+
+  # Watchdog: if the gateway dies, kill PID 1 so Railway sees a container exit
+  # and respawns cleanly. Without this, the gateway can crash silently while
+  # the health server keeps the container alive returning 503 — Railway will
+  # only retry restartPolicyMaxRetries times before giving up entirely.
+  (
+    sleep 30  # Grace period for gateway to fully boot
+    while true; do
+      if ! pidof openclaw-gateway >/dev/null 2>&1; then
+        echo "[entrypoint] Watchdog: gateway process gone — exiting container so Railway respawns"
+        kill -TERM 1 2>/dev/null
+        sleep 5
+        kill -KILL 1 2>/dev/null
+        exit 1
+      fi
+      sleep 10
+    done
+  ) &
+  disown
 else
   echo "[entrypoint] =============================================="
   echo "[entrypoint] WARNING: No config generated — fallback mode"

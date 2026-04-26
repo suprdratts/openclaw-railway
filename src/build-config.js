@@ -397,11 +397,15 @@ function buildConfig() {
 
     // Streaming mode: off (default), partial, block, progress
     // progress shows tool execution steps in real-time without draft flashing
+    //
+    // v2026.4.x: scalar `streaming = "<mode>"` is legacy; new shape is the
+    // object form `streaming: { mode: "<mode>" }`. Upstream auto-maps the
+    // scalar but warns. Write the new shape directly.
     if (process.env.STREAMING_MODE) {
       const validStreamingModes = ['off', 'partial', 'block', 'progress'];
       const mode = process.env.STREAMING_MODE;
       if (validStreamingModes.includes(mode)) {
-        config.channels.telegram.streaming = mode;
+        config.channels.telegram.streaming = { mode };
         console.log(`[build-config] Telegram streaming: ${mode}`);
       } else {
         console.log(`[build-config] WARNING: STREAMING_MODE='${mode}' is invalid — expected one of ${validStreamingModes.join(', ')}. Falling back to default (off).`);
