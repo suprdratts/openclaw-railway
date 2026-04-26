@@ -494,7 +494,12 @@ if [ -f "$CONFIG_FILE" ]; then
   # needs to write to these at runtime (devices, cron, sessions, canvas, etc).
   # We create them before locking the parent dir so the gateway doesn't need
   # mkdir permission on /data/.openclaw itself.
-  GATEWAY_DIRS="agents canvas cron devices identity sessions tasks logs"
+  #
+  # plugin-runtime-deps was added in v2026.4.x — gateway stages bundled plugin
+  # node_modules into a per-version subdir at boot. Without this dir, every
+  # plugin fails to install runtime deps (EACCES) and the gateway loads
+  # `ready (0 plugins)` — silently broken (no telegram, no discord, etc.).
+  GATEWAY_DIRS="agents canvas cron devices identity sessions tasks logs plugin-runtime-deps"
   for dir in $GATEWAY_DIRS; do
     mkdir -p "/data/.openclaw/$dir"
     chown openclaw:openclaw "/data/.openclaw/$dir"
