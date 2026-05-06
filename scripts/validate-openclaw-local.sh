@@ -111,6 +111,7 @@ docker run -d \
   -e PORT=8080 \
   -e OPENROUTER_API_KEY="validation-openrouter-key" \
   -e LLM_PRIMARY_MODEL="openrouter/openai/gpt-4o-mini" \
+  -e BRAVE_API_KEY="dummy-brave-key" \
   -e SECURITY_TIER="0" \
   -e DISCORD_BOT_TOKEN="dummy-discord-token" \
   -e DISCORD_OWNER_ID="111111111111111111" \
@@ -161,6 +162,7 @@ if (!guild) throw new Error('Discord guild config was not generated');
 if (!guild.channels?.['333333333333333333'] || typeof guild.channels['333333333333333333'] !== 'object') throw new Error('Discord allowlisted channel entry was not generated');
 if (guild.channels?.['333333333333333333']?.allow !== undefined) throw new Error('Discord channel config contains invalid legacy allow property');
 if (guild.channels?.['444444444444444444']?.requireMention !== false) throw new Error('Discord mention opt-out channel missing requireMention=false');
+if (config.tools?.web?.search?.provider === 'brave') throw new Error('Brave web_search provider should not be configured when unavailable');
 " || fail "security config assertions failed"
 
 echo "[validate-local] Scanning logs for blocker patterns"

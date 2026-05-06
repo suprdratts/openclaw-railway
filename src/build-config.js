@@ -261,19 +261,12 @@ function buildConfig() {
   configureImageModel(config);
 
   // --- Brave Search API Key (for web_search tool) ---
+  // OpenClaw 2026.5.x no longer ships the Brave provider plugin. Leaving a
+  // BRAVE_API_KEY-configured provider in openclaw.json fails schema validation
+  // before gateway startup, so keep the env var harmless until upstream ships
+  // Brave again or this template switches to another supported provider.
   if (process.env.BRAVE_API_KEY) {
-    config.tools = config.tools || {};
-    config.tools.web = config.tools.web || {};
-    config.tools.web.search = {
-      provider: 'brave',
-      apiKey: secretRef('BRAVE_API_KEY'),
-    };
-    // Opt-in LLM-grounded snippets mode (v2026.3.8+)
-    if (process.env.BRAVE_SEARCH_MODE === 'llm-context') {
-      config.tools.web.search.brave = { mode: 'llm-context' };
-      console.log('[build-config] Brave Search: llm-context mode enabled');
-    }
-    console.log('[build-config] Brave Search: API key configured for web_search');
+    console.log('[build-config] Brave Search: BRAVE_API_KEY detected but Brave provider is unavailable in this OpenClaw runtime; web_search provider config skipped');
   }
 
   // --- LLM Model (required - user must specify) ---
