@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// fallow-ignore-file complexity
 /**
  * Build OpenClaw config from environment variables
  *
@@ -466,8 +468,9 @@ function buildConfig() {
         }
       }
 
-      // Optional channel-level allowlist. Without this, all channels in the
-      // guild are reachable (subject to Discord's own permissions).
+      // Optional channel-level allowlist. With groupPolicy=allowlist, presence
+      // in guild.channels is the allowlist marker; DiscordGuildChannelConfig has
+      // no `allow` property in current OpenClaw schemas.
       if (process.env.DISCORD_GUILD_CHANNELS) {
         const channelIds = process.env.DISCORD_GUILD_CHANNELS
           .split(',')
@@ -475,7 +478,7 @@ function buildConfig() {
           .filter(Boolean);
         guild.channels = guild.channels || {};
         for (const channelId of channelIds) {
-          guild.channels[channelId] = guild.channels[channelId] || { allow: true };
+          guild.channels[channelId] = guild.channels[channelId] || {};
         }
       }
 
@@ -491,7 +494,7 @@ function buildConfig() {
           .filter(Boolean);
         guild.channels = guild.channels || {};
         for (const channelId of mentionlessIds) {
-          const entry = guild.channels[channelId] = guild.channels[channelId] || { allow: true };
+          const entry = guild.channels[channelId] = guild.channels[channelId] || {};
           entry.requireMention = false;
         }
       }
