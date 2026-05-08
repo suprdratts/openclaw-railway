@@ -415,6 +415,10 @@ function buildConfig() {
 
   // --- Discord ---
   if (process.env.DISCORD_BOT_TOKEN) {
+    config.plugins = config.plugins || {};
+    config.plugins.entries = config.plugins.entries || {};
+    config.plugins.entries.discord = { enabled: true };
+
     config.channels.discord = config.channels.discord || {};
     config.channels.discord.enabled = true;
     config.channels.discord.token = secretRef('DISCORD_BOT_TOKEN');

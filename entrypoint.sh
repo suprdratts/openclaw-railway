@@ -499,7 +499,7 @@ if [ -f "$CONFIG_FILE" ]; then
   # node_modules into a per-version subdir at boot. Without this dir, every
   # plugin fails to install runtime deps (EACCES) and the gateway loads
   # `ready (0 plugins)` — silently broken (no telegram, no discord, etc.).
-  GATEWAY_DIRS="agents canvas cron devices identity sessions tasks logs plugin-runtime-deps"
+  GATEWAY_DIRS="agents canvas cron devices identity sessions tasks logs plugin-runtime-deps plugins npm"
   for dir in $GATEWAY_DIRS; do
     mkdir -p "/data/.openclaw/$dir"
     chown openclaw:openclaw "/data/.openclaw/$dir"
