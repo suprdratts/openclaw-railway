@@ -116,6 +116,19 @@ railway up
 
 Never run `openclaw update` inside the container.
 
+## OpenClaw Version Upgrade Protocol
+
+Do not update `OPENCLAW_VERSION` directly or rely on upstream auto-updates. Follow the harness-agnostic workflow in [`docs/OPENCLAW-UPGRADE-PROTOCOL.md`](docs/OPENCLAW-UPGRADE-PROTOCOL.md).
+
+Minimum gates before promotion:
+
+1. Confirm the candidate package exists.
+2. Run local Docker validation: `bun run openclaw:validate:local -- <version>`.
+3. Run Railway staging validation: `bun run openclaw:validate:railway -- <version>`.
+4. Verify plugin discovery and configured channels, especially Discord.
+5. Promote only after all gates pass, then monitor production.
+6. Tag the known-good template release after production passes.
+
 ## Internal Directory (`/internal/`)
 
 The `internal/` directory is gitignored and contains local-only development docs that are NOT shipped with the public template:
