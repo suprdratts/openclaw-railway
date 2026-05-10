@@ -481,7 +481,32 @@ if [ -f "$CONFIG_OVERLAY" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 4b. Harden config file permissions
+# 4b. Install required external channel plugins before hardening
+#     OpenClaw 2026.5.x externalized Discord into @openclaw/discord. When a
+#     Discord token is configured, ensure the plugin package is present on the
+#     persistent volume before the gateway starts. This runs before agents exist
+#     and before /data/.openclaw is locked back down.
+# -----------------------------------------------------------------------------
+if [ -n "${DISCORD_BOT_TOKEN:-}" ]; then
+  mkdir -p /data/.openclaw/plugins /data/.openclaw/npm
+  chown openclaw:openclaw /data/.openclaw /data/.openclaw/plugins /data/.openclaw/npm
+  chmod 700 /data/.openclaw /data/.openclaw/plugins /data/.openclaw/npm
+  chown openclaw:openclaw "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
+
+  if [ ! -d /data/.openclaw/npm/node_modules/@openclaw/discord ]; then
+    echo "[entrypoint] Discord configured; installing external plugin @openclaw/discord..."
+    if ! su openclaw -c "HOME=/home/openclaw OPENCLAW_STATE_DIR=/data/.openclaw OPENCLAW_CONFIG_PATH=$CONFIG_FILE openclaw plugins install @openclaw/discord --pin"; then
+      echo "[entrypoint] ERROR: failed to install @openclaw/discord"
+      exit 1
+    fi
+  else
+    echo "[entrypoint] Discord external plugin already installed"
+  fi
+fi
+
+# -----------------------------------------------------------------------------
+# 4c. Harden config file permissions
 #     Config is 640 root:openclaw — gateway can read, agent cannot write.
 #     This blocks the privilege escalation attack (agent overwriting config).
 #     Read access stays open because the gateway re-reads config for health checks.
@@ -530,7 +555,7 @@ echo "[entrypoint] Config schema validation: OK"
 # at 640 root:openclaw) still governs which tools are available.
 
 # -----------------------------------------------------------------------------
-# 4c. Build secrets env file for SecretRef resolution
+# 4d. Build secrets env file for SecretRef resolution
 #     Config uses SecretRef objects ({ source: "env", id: "KEY" }) instead of
 #     literal secrets. The gateway resolves these from its own process.env at
 #     startup, then holds them in-memory only. We pass them via env -i so they
